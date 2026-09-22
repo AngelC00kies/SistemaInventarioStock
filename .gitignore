@@ -1,0 +1,25 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+
+# Node
+node_modules/
+dist/
+.vite/
+*.local
+
+# Logs / editor
+*.log
+.idea/
+.vscode/
+.DS_Store
+
+# Entornos sensibles (nunca subir)
+appsettings.*.Local.json
+*.pfx
+.env
