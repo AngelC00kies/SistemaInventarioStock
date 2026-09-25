@@ -12,114 +12,114 @@ public static class Mapping
         return "ok";
     }
 
-    public static ProductDto ToDto(Product p, int? warehouseId = null)
+    public static ProductDto ToDto(Producto p, int? warehouseId = null)
     {
-        var stockLevels = p.StockLevels ?? new List<StockLevel>();
-        var total = stockLevels.Sum(s => s.Quantity);
+        var stockLevels = p.NivelesStock ?? new List<NivelStock>();
+        var total = stockLevels.Sum(s => s.Cantidad);
 
         return new ProductDto
         {
             Id = p.Id,
-            Code = p.Code,
-            Name = p.Name,
-            Description = p.Description,
-            CategoryId = p.CategoryId,
-            CategoryName = p.Category?.Name ?? string.Empty,
-            SupplierId = p.SupplierId,
-            SupplierName = p.Supplier?.Name,
-            PurchasePrice = p.PurchasePrice,
-            SalePrice = p.SalePrice,
-            Unit = p.Unit,
-            MinStock = p.MinStock,
-            IsActive = p.IsActive,
+            Code = p.Codigo,
+            Name = p.Nombre,
+            Description = p.Descripcion,
+            CategoryId = p.CategoriaId,
+            CategoryName = p.Categoria?.Nombre ?? string.Empty,
+            SupplierId = p.ProveedorId,
+            SupplierName = p.Proveedor?.Nombre,
+            PurchasePrice = p.PrecioCompra,
+            SalePrice = p.PrecioVenta,
+            Unit = p.Unidad,
+            MinStock = p.StockMinimo,
+            IsActive = p.Activo,
             TotalStock = total,
-            Status = ProductStatus(total, p.MinStock),
-            CreatedAt = p.CreatedAt,
+            Status = ProductStatus(total, p.StockMinimo),
+            CreatedAt = p.FechaCreacion,
             StockByWarehouse = stockLevels
-                .Where(s => !warehouseId.HasValue || s.WarehouseId == warehouseId.Value)
+                .Where(s => !warehouseId.HasValue || s.AlmacenId == warehouseId.Value)
                 .Select(s => new WarehouseStockDto
                 {
-                    WarehouseId = s.WarehouseId,
-                    WarehouseName = s.Warehouse?.Name ?? string.Empty,
-                    Quantity = s.Quantity
+                    WarehouseId = s.AlmacenId,
+                    WarehouseName = s.Almacen?.Nombre ?? string.Empty,
+                    Quantity = s.Cantidad
                 })
                 .OrderBy(s => s.WarehouseName)
                 .ToList()
         };
     }
 
-    public static CategoryDto ToDto(Category c) => new()
+    public static CategoryDto ToDto(Categoria c) => new()
     {
         Id = c.Id,
-        Name = c.Name,
-        Description = c.Description,
-        IsActive = c.IsActive,
-        ProductCount = c.Products?.Count(p => p.IsActive) ?? 0
+        Name = c.Nombre,
+        Description = c.Descripcion,
+        IsActive = c.Activo,
+        ProductCount = c.Productos?.Count(p => p.Activo) ?? 0
     };
 
-    public static SupplierDto ToDto(Supplier s) => new()
+    public static SupplierDto ToDto(Proveedor s) => new()
     {
         Id = s.Id,
-        Name = s.Name,
-        ContactName = s.ContactName,
-        Phone = s.Phone,
-        Email = s.Email,
-        Address = s.Address,
-        IsActive = s.IsActive,
-        ProductCount = s.Products?.Count(p => p.IsActive) ?? 0
+        Name = s.Nombre,
+        ContactName = s.NombreContacto,
+        Phone = s.Telefono,
+        Email = s.Correo,
+        Address = s.Direccion,
+        IsActive = s.Activo,
+        ProductCount = s.Productos?.Count(p => p.Activo) ?? 0
     };
 
-    public static WarehouseDto ToDto(Warehouse w) => new()
+    public static WarehouseDto ToDto(Almacen w) => new()
     {
         Id = w.Id,
-        Name = w.Name,
-        Code = w.Code,
-        Location = w.Location,
-        IsActive = w.IsActive,
-        ProductCount = w.StockLevels?.Count(s => s.Quantity > 0) ?? 0,
-        TotalUnits = w.StockLevels?.Sum(s => s.Quantity) ?? 0
+        Name = w.Nombre,
+        Code = w.Codigo,
+        Location = w.Ubicacion,
+        IsActive = w.Activo,
+        ProductCount = w.NivelesStock?.Count(s => s.Cantidad > 0) ?? 0,
+        TotalUnits = w.NivelesStock?.Sum(s => s.Cantidad) ?? 0
     };
 
-    public static MovementDto ToDto(Movement m) => new()
+    public static MovementDto ToDto(Movimiento m) => new()
     {
         Id = m.Id,
-        Date = m.Date,
-        Type = m.Type,
-        Reason = m.Reason,
-        Quantity = m.Quantity,
-        ProductId = m.ProductId,
-        ProductCode = m.Product?.Code ?? string.Empty,
-        ProductName = m.Product?.Name ?? string.Empty,
-        WarehouseId = m.WarehouseId,
-        WarehouseName = m.Warehouse?.Name ?? string.Empty,
-        UserId = m.UserId,
-        UserName = m.User?.FullName ?? string.Empty,
-        DocumentReference = m.DocumentReference,
-        StockAfter = m.StockAfter,
-        UnitPrice = m.UnitPrice
+        Date = m.Fecha,
+        Type = m.Tipo,
+        Reason = m.Motivo,
+        Quantity = m.Cantidad,
+        ProductId = m.ProductoId,
+        ProductCode = m.Producto?.Codigo ?? string.Empty,
+        ProductName = m.Producto?.Nombre ?? string.Empty,
+        WarehouseId = m.AlmacenId,
+        WarehouseName = m.Almacen?.Nombre ?? string.Empty,
+        UserId = m.UsuarioId,
+        UserName = m.Usuario?.NombreCompleto ?? string.Empty,
+        DocumentReference = m.DocumentoReferencia,
+        StockAfter = m.StockResultante,
+        UnitPrice = m.PrecioUnitario
     };
 
-    public static UserDto ToDto(User u) => new()
+    public static UserDto ToDto(Usuario u) => new()
     {
         Id = u.Id,
-        Username = u.Username,
-        FullName = u.FullName,
-        Email = u.Email,
-        RoleId = u.RoleId,
-        Role = u.Role?.Name ?? string.Empty,
-        IsActive = u.IsActive,
-        CreatedAt = u.CreatedAt
+        Username = u.NombreUsuario,
+        FullName = u.NombreCompleto,
+        Email = u.Correo,
+        RoleId = u.RolId,
+        Role = u.Rol?.Nombre ?? string.Empty,
+        IsActive = u.Activo,
+        CreatedAt = u.FechaCreacion
     };
 
-    public static NotificationDto ToDto(AppNotification n) => new()
+    public static NotificationDto ToDto(Notificacion n) => new()
     {
         Id = n.Id,
-        ProductId = n.ProductId,
-        ProductName = n.Product?.Name,
-        WarehouseName = n.Warehouse?.Name,
-        Message = n.Message,
-        Level = n.Level,
-        IsRead = n.IsRead,
-        CreatedAt = n.CreatedAt
+        ProductId = n.ProductoId,
+        ProductName = n.Producto?.Nombre,
+        WarehouseName = n.Almacen?.Nombre,
+        Message = n.Mensaje,
+        Level = n.Nivel,
+        IsRead = n.Leida,
+        CreatedAt = n.FechaCreacion
     };
 }

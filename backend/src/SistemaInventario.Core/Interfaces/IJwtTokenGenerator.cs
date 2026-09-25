@@ -4,5 +4,5 @@ namespace SistemaInventario.Core.Interfaces;
 
 public interface IJwtTokenGenerator
 {
-    (string Token, DateTime ExpiresAt) Generate(User user);
+    (string Token, DateTime ExpiresAt) Generate(Usuario user);
 }

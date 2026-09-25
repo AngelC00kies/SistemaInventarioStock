@@ -14,7 +14,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public JwtTokenGenerator(IOptions<JwtOptions> options) => _options = options.Value;
 
-    public (string Token, DateTime ExpiresAt) Generate(User user)
+    public (string Token, DateTime ExpiresAt) Generate(Usuario user)
     {
         var expires = DateTime.UtcNow.AddMinutes(_options.ExpirationMinutes);
 
@@ -22,9 +22,9 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.Username),
-            new("fullName", user.FullName),
-            new(ClaimTypes.Role, user.Role.Name),
+            new(ClaimTypes.Name, user.NombreUsuario),
+            new("fullName", user.NombreCompleto),
+            new(ClaimTypes.Role, user.Rol.Nombre),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

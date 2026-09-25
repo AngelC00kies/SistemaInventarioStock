@@ -14,37 +14,37 @@ public class NotificationService : INotificationService
 
     public async Task<List<NotificationDto>> GetAsync(int limit, bool onlyUnread, CancellationToken ct = default)
     {
-        var query = _db.Notifications.AsNoTracking()
-            .Include(n => n.Product)
-            .Include(n => n.Warehouse)
+        var query = _db.Notificaciones.AsNoTracking()
+            .Include(n => n.Producto)
+            .Include(n => n.Almacen)
             .AsQueryable();
 
-        if (onlyUnread) query = query.Where(n => !n.IsRead);
+        if (onlyUnread) query = query.Where(n => !n.Leida);
 
         return await query
-            .OrderByDescending(n => n.IsRead)
-            .ThenByDescending(n => n.CreatedAt)
+            .OrderByDescending(n => n.Leida)
+            .ThenByDescending(n => n.FechaCreacion)
             .Take(Math.Clamp(limit, 1, 200))
             .Select(n => Mapping.ToDto(n))
             .ToListAsync(ct);
     }
 
     public async Task<int> GetUnreadCountAsync(CancellationToken ct = default) =>
-        await _db.Notifications.CountAsync(n => !n.IsRead, ct);
+        await _db.Notificaciones.CountAsync(n => !n.Leida, ct);
 
     public async Task MarkAsReadAsync(int id, CancellationToken ct = default)
     {
-        var notification = await _db.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct)
+        var notification = await _db.Notificaciones.FirstOrDefaultAsync(n => n.Id == id, ct)
             ?? throw new NotFoundException("Notificación no encontrada.");
 
-        notification.IsRead = true;
+        notification.Leida = true;
         await _db.SaveChangesAsync(ct);
     }
 
     public async Task MarkAllAsReadAsync(CancellationToken ct = default)
     {
-        var unread = await _db.Notifications.Where(n => !n.IsRead).ToListAsync(ct);
-        unread.ForEach(n => n.IsRead = true);
+        var unread = await _db.Notificaciones.Where(n => !n.Leida).ToListAsync(ct);
+        unread.ForEach(n => n.Leida = true);
         await _db.SaveChangesAsync(ct);
     }
 }

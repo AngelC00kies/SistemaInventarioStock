@@ -12,105 +12,105 @@ public static class SeedData
 
     public static async Task InitializeAsync(AppDbContext db)
     {
-        if (await db.Users.AnyAsync()) return;
+        if (await db.Usuarios.AnyAsync()) return;
 
-        var roles = new List<Role>
+        var roles = new List<Rol>
         {
-            new() { Name = "Admin", Description = "Acceso total al sistema" },
-            new() { Name = "Usuario", Description = "Gestión operativa de inventario" },
-            new() { Name = "Auditor", Description = "Solo lectura y consultas" }
+            new() { Nombre = "Admin", Descripcion = "Acceso total al sistema" },
+            new() { Nombre = "Usuario", Descripcion = "Gestión operativa de inventario" },
+            new() { Nombre = "Auditor", Descripcion = "Solo lectura y consultas" }
         };
         db.AddRange(roles);
         await db.SaveChangesAsync();
 
-        var admin = new User
+        var admin = new Usuario
         {
-            Username = "admin",
-            PasswordHash = PasswordHasher.Hash(AdminPassword),
-            FullName = "Administrador General",
-            Email = "admin@sistema.com",
-            RoleId = roles[0].Id
+            NombreUsuario = "admin",
+            ContrasenaHash = PasswordHasher.Hash(AdminPassword),
+            NombreCompleto = "Administrador General",
+            Correo = "admin@sistema.com",
+            RolId = roles[0].Id
         };
-        var operatorUser = new User
+        var operatorUser = new Usuario
         {
-            Username = "operador",
-            PasswordHash = PasswordHasher.Hash(UserPassword),
-            FullName = "Operador de Almacén",
-            Email = "operador@sistema.com",
-            RoleId = roles[1].Id
+            NombreUsuario = "operador",
+            ContrasenaHash = PasswordHasher.Hash(UserPassword),
+            NombreCompleto = "Operador de Almacén",
+            Correo = "operador@sistema.com",
+            RolId = roles[1].Id
         };
-        var auditor = new User
+        var auditor = new Usuario
         {
-            Username = "auditor",
-            PasswordHash = PasswordHasher.Hash(UserPassword),
-            FullName = "Auditor de Inventarios",
-            Email = "auditor@sistema.com",
-            RoleId = roles[2].Id
+            NombreUsuario = "auditor",
+            ContrasenaHash = PasswordHasher.Hash(UserPassword),
+            NombreCompleto = "Auditor de Inventarios",
+            Correo = "auditor@sistema.com",
+            RolId = roles[2].Id
         };
         db.AddRange(admin, operatorUser, auditor);
         await db.SaveChangesAsync();
 
-        var categories = new List<Category>
+        var categorias = new List<Categoria>
         {
-            new() { Name = "Electrónica", Description = "Equipos y componentes electrónicos" },
-            new() { Name = "Oficina", Description = "Suministros y materiales de oficina" },
-            new() { Name = "Herramientas", Description = "Herramientas manuales y eléctricas" },
-            new() { Name = "Limpieza", Description = "Productos de limpieza y aseo" },
-            new() { Name = "Seguridad", Description = "Equipos de protección y seguridad" }
+            new() { Nombre = "Electrónica", Descripcion = "Equipos y componentes electrónicos" },
+            new() { Nombre = "Oficina", Descripcion = "Suministros y materiales de oficina" },
+            new() { Nombre = "Herramientas", Descripcion = "Herramientas manuales y eléctricas" },
+            new() { Nombre = "Limpieza", Descripcion = "Productos de limpieza y aseo" },
+            new() { Nombre = "Seguridad", Descripcion = "Equipos de protección y seguridad" }
         };
-        db.AddRange(categories);
+        db.AddRange(categorias);
         await db.SaveChangesAsync();
 
-        var suppliers = new List<Supplier>
+        var proveedores = new List<Proveedor>
         {
-            new() { Name = "Distribuidora Nacional S.A.", ContactName = "Carlos Méndez", Phone = "+56 2 2345 6789", Email = "ventas@dnacional.cl", Address = "Av. Providencia 1234, Santiago" },
-            new() { Name = "TecnoImport SpA", ContactName = "Lucía Fernández", Phone = "+56 2 2987 4321", Email = "contacto@tecnoimport.cl", Address = "Calle Industrial 567, Quilicura" },
-            new() { Name = "Suministros del Sur Ltda.", ContactName = "Roberto Soto", Phone = "+56 4 2234 8899", Email = "pedidos@sursuministros.cl", Address = "Ruta 5 Sur Km 12, Talca" }
+            new() { Nombre = "Distribuidora Nacional S.A.", NombreContacto = "Carlos Méndez", Telefono = "+56 2 2345 6789", Correo = "ventas@dnacional.cl", Direccion = "Av. Providencia 1234, Santiago" },
+            new() { Nombre = "TecnoImport SpA", NombreContacto = "Lucía Fernández", Telefono = "+56 2 2987 4321", Correo = "contacto@tecnoimport.cl", Direccion = "Calle Industrial 567, Quilicura" },
+            new() { Nombre = "Suministros del Sur Ltda.", NombreContacto = "Roberto Soto", Telefono = "+56 4 2234 8899", Correo = "pedidos@sursuministros.cl", Direccion = "Ruta 5 Sur Km 12, Talca" }
         };
-        db.AddRange(suppliers);
+        db.AddRange(proveedores);
         await db.SaveChangesAsync();
 
-        var warehouses = new List<Warehouse>
+        var almacenes = new List<Almacen>
         {
-            new() { Name = "Almacén Central", Code = "ALM-01", Location = "Santiago — Bodega principal" },
-            new() { Name = "Almacén Norte", Code = "ALM-02", Location = "Antofagasta" },
-            new() { Name = "Almacén Sur", Code = "ALM-03", Location = "Temuco" }
+            new() { Nombre = "Almacén Central", Codigo = "ALM-01", Ubicacion = "Santiago — Bodega principal" },
+            new() { Nombre = "Almacén Norte", Codigo = "ALM-02", Ubicacion = "Antofagasta" },
+            new() { Nombre = "Almacén Sur", Codigo = "ALM-03", Ubicacion = "Temuco" }
         };
-        db.AddRange(warehouses);
+        db.AddRange(almacenes);
         await db.SaveChangesAsync();
 
-        var products = new List<Product>
+        var productos = new List<Producto>
         {
-            new() { Code = "PRD-0001", Name = "Notebook 14\" Core i5", Description = "Notebook corporativo 16 GB RAM, 512 GB SSD", CategoryId = categories[0].Id, SupplierId = suppliers[1].Id, PurchasePrice = 520000, SalePrice = 699990, Unit = "Unidad", MinStock = 5 },
-            new() { Code = "PRD-0002", Name = "Mouse inalámbrico ergonómico", Description = "Mouse óptico sin cable, USB 2.4 GHz", CategoryId = categories[0].Id, SupplierId = suppliers[1].Id, PurchasePrice = 7500, SalePrice = 12990, Unit = "Unidad", MinStock = 20 },
-            new() { Code = "PRD-0003", Name = "Teclado mecánico RGB", Description = "Switches rojos, retroiluminación configurable", CategoryId = categories[0].Id, SupplierId = suppliers[1].Id, PurchasePrice = 25000, SalePrice = 39990, Unit = "Unidad", MinStock = 10 },
-            new() { Code = "PRD-0004", Name = "Monitor 24\" Full HD", Description = "Panel IPS 75 Hz, HDMI + VGA", CategoryId = categories[0].Id, SupplierId = suppliers[0].Id, PurchasePrice = 98000, SalePrice = 139990, Unit = "Unidad", MinStock = 8 },
-            new() { Code = "PRD-0005", Name = "Resma papel carta 75 g", Description = "500 hojas, blanco natural", CategoryId = categories[1].Id, SupplierId = suppliers[2].Id, PurchasePrice = 3900, SalePrice = 5490, Unit = "Resma", MinStock = 30 },
-            new() { Code = "PRD-0006", Name = "Tóner negro 2.6k páginas", Description = "Compatible con impresoras láser A4", CategoryId = categories[1].Id, SupplierId = suppliers[0].Id, PurchasePrice = 32000, SalePrice = 45990, Unit = "Unidad", MinStock = 6 },
-            new() { Code = "PRD-0007", Name = "Set desarmadores 12 piezas", Description = "Varillas de acero con mango antideslizante", CategoryId = categories[2].Id, SupplierId = suppliers[2].Id, PurchasePrice = 9800, SalePrice = 15990, Unit = "Set", MinStock = 12 },
-            new() { Code = "PRD-0008", Name = "Taladro percutor 650 W", Description = "Mandril 13 mm, 2 velocidades", CategoryId = categories[2].Id, SupplierId = suppliers[1].Id, PurchasePrice = 54000, SalePrice = 74990, Unit = "Unidad", MinStock = 4 },
-            new() { Code = "PRD-0009", Name = "Detergente industrial 5 L", Description = "Concentrado para limpieza de pisos", CategoryId = categories[3].Id, SupplierId = suppliers[2].Id, PurchasePrice = 8200, SalePrice = 11990, Unit = "Bidón", MinStock = 15 },
-            new() { Code = "PRD-0010", Name = "Guantes de nitrilo (caja 100)", Description = "Talla M, uso general", CategoryId = categories[4].Id, SupplierId = suppliers[0].Id, PurchasePrice = 6500, SalePrice = 9990, Unit = "Caja", MinStock = 25 },
-            new() { Code = "PRD-0011", Name = "Casco de seguridad blanco", Description = "Casco tipo M con ajuste de leva", CategoryId = categories[4].Id, SupplierId = suppliers[2].Id, PurchasePrice = 4800, SalePrice = 7990, Unit = "Unidad", MinStock = 20 },
-            new() { Code = "PRD-0012", Name = "Cable de red Cat6 (305 m)", Description = "Bobina UTP sin oxígeno", CategoryId = categories[0].Id, SupplierId = suppliers[1].Id, PurchasePrice = 78000, SalePrice = 109990, Unit = "Bobina", MinStock = 3 }
+            new() { Codigo = "PRD-0001", Nombre = "Notebook 14\" Core i5", Descripcion = "Notebook corporativo 16 GB RAM, 512 GB SSD", CategoriaId = categorias[0].Id, ProveedorId = proveedores[1].Id, PrecioCompra = 520000, PrecioVenta = 699990, Unidad = "Unidad", StockMinimo = 5 },
+            new() { Codigo = "PRD-0002", Nombre = "Mouse inalámbrico ergonómico", Descripcion = "Mouse óptico sin cable, USB 2.4 GHz", CategoriaId = categorias[0].Id, ProveedorId = proveedores[1].Id, PrecioCompra = 7500, PrecioVenta = 12990, Unidad = "Unidad", StockMinimo = 20 },
+            new() { Codigo = "PRD-0003", Nombre = "Teclado mecánico RGB", Descripcion = "Switches rojos, retroiluminación configurable", CategoriaId = categorias[0].Id, ProveedorId = proveedores[1].Id, PrecioCompra = 25000, PrecioVenta = 39990, Unidad = "Unidad", StockMinimo = 10 },
+            new() { Codigo = "PRD-0004", Nombre = "Monitor 24\" Full HD", Descripcion = "Panel IPS 75 Hz, HDMI + VGA", CategoriaId = categorias[0].Id, ProveedorId = proveedores[0].Id, PrecioCompra = 98000, PrecioVenta = 139990, Unidad = "Unidad", StockMinimo = 8 },
+            new() { Codigo = "PRD-0005", Nombre = "Resma papel carta 75 g", Descripcion = "500 hojas, blanco natural", CategoriaId = categorias[1].Id, ProveedorId = proveedores[2].Id, PrecioCompra = 3900, PrecioVenta = 5490, Unidad = "Resma", StockMinimo = 30 },
+            new() { Codigo = "PRD-0006", Nombre = "Tóner negro 2.6k páginas", Descripcion = "Compatible con impresoras láser A4", CategoriaId = categorias[1].Id, ProveedorId = proveedores[0].Id, PrecioCompra = 32000, PrecioVenta = 45990, Unidad = "Unidad", StockMinimo = 6 },
+            new() { Codigo = "PRD-0007", Nombre = "Set desarmadores 12 piezas", Descripcion = "Varillas de acero con mango antideslizante", CategoriaId = categorias[2].Id, ProveedorId = proveedores[2].Id, PrecioCompra = 9800, PrecioVenta = 15990, Unidad = "Set", StockMinimo = 12 },
+            new() { Codigo = "PRD-0008", Nombre = "Taladro percutor 650 W", Descripcion = "Mandril 13 mm, 2 velocidades", CategoriaId = categorias[2].Id, ProveedorId = proveedores[1].Id, PrecioCompra = 54000, PrecioVenta = 74990, Unidad = "Unidad", StockMinimo = 4 },
+            new() { Codigo = "PRD-0009", Nombre = "Detergente industrial 5 L", Descripcion = "Concentrado para limpieza de pisos", CategoriaId = categorias[3].Id, ProveedorId = proveedores[2].Id, PrecioCompra = 8200, PrecioVenta = 11990, Unidad = "Bidón", StockMinimo = 15 },
+            new() { Codigo = "PRD-0010", Nombre = "Guantes de nitrilo (caja 100)", Descripcion = "Talla M, uso general", CategoriaId = categorias[4].Id, ProveedorId = proveedores[0].Id, PrecioCompra = 6500, PrecioVenta = 9990, Unidad = "Caja", StockMinimo = 25 },
+            new() { Codigo = "PRD-0011", Nombre = "Casco de seguridad blanco", Descripcion = "Casco tipo M con ajuste de leva", CategoriaId = categorias[4].Id, ProveedorId = proveedores[2].Id, PrecioCompra = 4800, PrecioVenta = 7990, Unidad = "Unidad", StockMinimo = 20 },
+            new() { Codigo = "PRD-0012", Nombre = "Cable de red Cat6 (305 m)", Descripcion = "Bobina UTP sin oxígeno", CategoriaId = categorias[0].Id, ProveedorId = proveedores[1].Id, PrecioCompra = 78000, PrecioVenta = 109990, Unidad = "Bobina", StockMinimo = 3 }
         };
-        db.AddRange(products);
+        db.AddRange(productos);
         await db.SaveChangesAsync();
 
         var random = new Random(20260924);
         var now = DateTime.UtcNow;
 
-        foreach (var product in products)
+        foreach (var producto in productos)
         {
-            foreach (var warehouse in warehouses)
+            foreach (var almacen in almacenes)
             {
                 var qty = random.Next(0, 120);
-                db.Add(new StockLevel { ProductId = product.Id, WarehouseId = warehouse.Id, Quantity = qty });
+                db.Add(new NivelStock { ProductoId = producto.Id, AlmacenId = almacen.Id, Cantidad = qty });
             }
         }
         await db.SaveChangesAsync();
 
-        var reasons = new List<string>
+        var motivos = new List<string>
         {
             "Ingreso por compra a proveedor",
             "Despacho a área de ventas",
@@ -120,50 +120,50 @@ public static class SeedData
             "Merma por rotura"
         };
 
-        var movements = new List<Movement>();
+        var movimientos = new List<Movimiento>();
         for (var i = 0; i < 90; i++)
         {
-            var product = products[random.Next(products.Count)];
-            var warehouse = warehouses[random.Next(warehouses.Count)];
+            var producto = productos[random.Next(productos.Count)];
+            var almacen = almacenes[random.Next(almacenes.Count)];
             var type = random.Next(100) < 55 ? MovementType.Entrada : MovementType.Salida;
             var daysBack = random.Next(0, 45);
             var date = now.AddDays(-daysBack).AddHours(-random.Next(0, 12));
             var qty = random.Next(1, 25);
 
-            var stock = await db.StockLevels
-                .FirstOrDefaultAsync(s => s.ProductId == product.Id && s.WarehouseId == warehouse.Id);
+            var stock = await db.NivelesStock
+                .FirstOrDefaultAsync(s => s.ProductoId == producto.Id && s.AlmacenId == almacen.Id);
 
             if (type == MovementType.Salida)
             {
-                if (stock is null || stock.Quantity <= 0) continue;
-                qty = Math.Min(qty, stock.Quantity);
-                stock.Quantity -= qty;
+                if (stock is null || stock.Cantidad <= 0) continue;
+                qty = Math.Min(qty, stock.Cantidad);
+                stock.Cantidad -= qty;
             }
             else
             {
                 if (stock is null)
                 {
-                    stock = new StockLevel { ProductId = product.Id, WarehouseId = warehouse.Id, Quantity = 0 };
+                    stock = new NivelStock { ProductoId = producto.Id, AlmacenId = almacen.Id, Cantidad = 0 };
                     db.Add(stock);
                 }
-                stock.Quantity += qty;
+                stock.Cantidad += qty;
             }
 
-            movements.Add(new Movement
+            movimientos.Add(new Movimiento
             {
-                Date = date,
-                Type = type,
-                Reason = reasons[random.Next(reasons.Count)],
-                Quantity = qty,
-                ProductId = product.Id,
-                WarehouseId = warehouse.Id,
-                UserId = random.Next(100) < 70 ? admin.Id : operatorUser.Id,
-                DocumentReference = type == MovementType.Entrada ? $"OC-{random.Next(1000, 9999)}" : $"GD-{random.Next(1000, 9999)}",
-                StockAfter = stock.Quantity,
-                UnitPrice = type == MovementType.Entrada ? product.PurchasePrice : product.SalePrice
+                Fecha = date,
+                Tipo = type,
+                Motivo = motivos[random.Next(motivos.Count)],
+                Cantidad = qty,
+                ProductoId = producto.Id,
+                AlmacenId = almacen.Id,
+                UsuarioId = random.Next(100) < 70 ? admin.Id : operatorUser.Id,
+                DocumentoReferencia = type == MovementType.Entrada ? $"OC-{random.Next(1000, 9999)}" : $"GD-{random.Next(1000, 9999)}",
+                StockResultante = stock.Cantidad,
+                PrecioUnitario = type == MovementType.Entrada ? producto.PrecioCompra : producto.PrecioVenta
             });
         }
-        db.AddRange(movements);
+        db.AddRange(movimientos);
         await db.SaveChangesAsync();
 
         await GenerateLowStockNotificationsAsync(db);
@@ -172,30 +172,30 @@ public static class SeedData
 
     public static async Task GenerateLowStockNotificationsAsync(AppDbContext db)
     {
-        var lows = await db.StockLevels
-            .Include(s => s.Product)
-            .Include(s => s.Warehouse)
-            .Where(s => s.Product.IsActive && s.Quantity <= s.Product.MinStock)
+        var lows = await db.NivelesStock
+            .Include(s => s.Producto)
+            .Include(s => s.Almacen)
+            .Where(s => s.Producto.Activo && s.Cantidad <= s.Producto.StockMinimo)
             .ToListAsync();
 
         foreach (var level in lows)
         {
-            var exists = await db.Notifications.AnyAsync(n =>
-                n.ProductId == level.ProductId &&
-                n.WarehouseId == level.WarehouseId &&
-                !n.IsRead);
+            var exists = await db.Notificaciones.AnyAsync(n =>
+                n.ProductoId == level.ProductoId &&
+                n.AlmacenId == level.AlmacenId &&
+                !n.Leida);
 
             if (exists) continue;
 
-            db.Add(new AppNotification
+            db.Add(new Notificacion
             {
-                ProductId = level.ProductId,
-                WarehouseId = level.WarehouseId,
-                Level = level.Quantity <= level.Product.MinStock / 2.0
+                ProductoId = level.ProductoId,
+                AlmacenId = level.AlmacenId,
+                Nivel = level.Cantidad <= level.Producto.StockMinimo / 2.0
                     ? NotificationLevel.Critical
                     : NotificationLevel.Warning,
-                Message = $"Stock bajo: \"{level.Product.Name}\" tiene {level.Quantity} {level.Product.Unit.ToLower()} " +
-                          $"(mínimo {level.Product.MinStock}) en {level.Warehouse.Name}."
+                Mensaje = $"Stock bajo: \"{level.Producto.Nombre}\" tiene {level.Cantidad} {level.Producto.Unidad.ToLower()} " +
+                          $"(mínimo {level.Producto.StockMinimo}) en {level.Almacen.Nombre}."
             });
         }
     }
