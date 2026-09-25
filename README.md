@@ -226,10 +226,61 @@ SistemaInventario/
 │       ├── pages/      Vistas (dashboard, productos, movimientos, reportes, …)
 │       ├── router/     Rutas y guardas por rol
 │       └── stores/     Pinia (sesión, notificaciones, almacenes, toasts)
+├── database/
+│   └── inventario.sql                Solo CREATE TABLE (sin datos)
 ├── iniciar-backend.bat
 ├── iniciar-frontend.bat
 └── README.md
 ```
+
+---
+
+## 5.1 Esquema de la base de datos
+
+Los nombres de tablas, columnas e índices **no contienen acentos ni caracteres
+especiales**. Las entidades C# del proyecto `Core/Entities` usan esos mismos nombres
+(`Producto.Codigo`, `Movimiento.Fecha`…), mientras que **los DTOs y el JSON de la API
+están en inglés** (`code`, `date`…): ese contrato no cambió y el frontend no se vio
+afectado.
+
+| Tabla | Columnas |
+|---|---|
+| `Roles` | `Id`, `Nombre`, `Descripcion` |
+| `Usuarios` | `Id`, `NombreUsuario`, `ContrasenaHash`, `NombreCompleto`, `Correo`, `RolId`, `Activo`, `FechaCreacion` |
+| `Categorias` | `Id`, `Nombre`, `Descripcion`, `Activo` |
+| `Proveedores` | `Id`, `Nombre`, `NombreContacto`, `Telefono`, `Correo`, `Direccion`, `Activo` |
+| `Almacenes` | `Id`, `Nombre`, `Codigo`, `Ubicacion`, `Activo` |
+| `Productos` | `Id`, `Codigo`, `Nombre`, `Descripcion`, `CategoriaId`, `ProveedorId`, `PrecioCompra`, `PrecioVenta`, `Unidad`, `StockMinimo`, `Activo`, `FechaCreacion` |
+| `NivelesStock` | `ProductoId`, `AlmacenId`, `Cantidad` |
+| `Movimientos` | `Id`, `Fecha`, `Tipo`, `Motivo`, `Cantidad`, `ProductoId`, `AlmacenId`, `UsuarioId`, `DocumentoReferencia`, `StockResultante`, `PrecioUnitario` |
+| `Notificaciones` | `Id`, `ProductoId`, `AlmacenId`, `Mensaje`, `Nivel`, `Leida`, `FechaCreacion` |
+
+- La tabla de control de migraciones (`__EFMigrationsHistory`) conserva su nombre estándar.
+- `database/inventario.sql` contiene **solo** las consultas de creación
+  (`CREATE TABLE` + índices + claves foráneas), sin inserciones.
+- Los datos existentes se preservan con la migración de renombre de tablas y columnas
+  (95 operaciones `sp_rename`, **0** `DROP TABLE` / **0** `CREATE TABLE`).
+
+---
+
+## 5.2 Ramas del repositorio
+
+| Rama | Contenido |
+|---|---|
+| `main` | Historial completo integrado desde `develop`. Rama por defecto. |
+| `develop` | Integración: recibe cada rama de funcionalidad con `--no-ff`. |
+| `feature/config-inicial` | Solución .NET, `.gitignore`, herramientas, accesos directos |
+| `feature/dominio` | `Core`: entidades, DTOs, interfaces, enums, excepciones |
+| `feature/infraestructura` | `Infrastructure`: DbContext, migración inicial, seed, servicios |
+| `feature/reportes-backend` | `Reporting`: QuestPDF y ClosedXML |
+| `feature/api-auth` | `Api`: controladores, JWT, middleware, `Program.cs` |
+| `feature/frontend-base` | Vue + Vite + Tailwind, layout, login, router, stores |
+| `feature/frontend-catalogos` | Páginas de productos, categorías, proveedores y almacenes |
+| `feature/frontend-movimientos` | Dashboard y página de movimientos |
+| `feature/frontend-reportes` | Página de reportes con exportación PDF/Excel |
+| `feature/base-datos` | Renombrado de tablas, columnas, índices y entidades C# |
+| `feature/script-sql` | `database/inventario.sql` |
+| `feature/docs-readme` | Este README: estructura, esquema de datos y ramas |
 
 ---
 
