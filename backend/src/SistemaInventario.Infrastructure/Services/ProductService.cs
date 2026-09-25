@@ -13,12 +13,12 @@ public class ProductService : IProductService
 
     public ProductService(AppDbContext db) => _db = db;
 
-    private IQueryable<Core.Entities.Product> Query() =>
-        _db.Products
+    private IQueryable<Core.Entities.Producto> Query() =>
+        _db.Productos
             .AsNoTracking()
-            .Include(p => p.Category)
-            .Include(p => p.Supplier)
-            .Include(p => p.StockLevels).ThenInclude(s => s.Warehouse);
+            .Include(p => p.Categoria)
+            .Include(p => p.Proveedor)
+            .Include(p => p.NivelesStock).ThenInclude(s => s.Almacen);
 
     public async Task<PagedResult<ProductDto>> GetAsync(ProductFilter filter, CancellationToken ct = default)
     {
@@ -28,33 +28,33 @@ public class ProductService : IProductService
         var query = Query();
 
         if (!filter.IncludeInactive.GetValueOrDefault())
-            query = query.Where(p => p.IsActive);
+            query = query.Where(p => p.Activo);
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             var term = filter.Search.Trim().ToLower();
             query = query.Where(p =>
-                p.Code.ToLower().Contains(term) ||
-                p.Name.ToLower().Contains(term) ||
-                (p.Description != null && p.Description.ToLower().Contains(term)));
+                p.Codigo.ToLower().Contains(term) ||
+                p.Nombre.ToLower().Contains(term) ||
+                (p.Descripcion != null && p.Descripcion.ToLower().Contains(term)));
         }
 
         if (filter.CategoryId.HasValue)
-            query = query.Where(p => p.CategoryId == filter.CategoryId.Value);
+            query = query.Where(p => p.CategoriaId == filter.CategoryId.Value);
 
         if (filter.SupplierId.HasValue)
-            query = query.Where(p => p.SupplierId == filter.SupplierId.Value);
+            query = query.Where(p => p.ProveedorId == filter.SupplierId.Value);
 
         if (filter.WarehouseId.HasValue)
-            query = query.Where(p => p.StockLevels.Any(s => s.WarehouseId == filter.WarehouseId.Value));
+            query = query.Where(p => p.NivelesStock.Any(s => s.AlmacenId == filter.WarehouseId.Value));
 
         if (filter.OnlyLowStock.GetValueOrDefault())
-            query = query.Where(p => p.StockLevels.Sum(s => s.Quantity) <= p.MinStock);
+            query = query.Where(p => p.NivelesStock.Sum(s => s.Cantidad) <= p.StockMinimo);
 
         var total = await query.CountAsync(ct);
 
         var items = await query
-            .OrderBy(p => p.Code)
+            .OrderBy(p => p.Codigo)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
@@ -81,42 +81,42 @@ public class ProductService : IProductService
     {
         await ValidateAsync(request, null, ct);
 
-        var product = new Core.Entities.Product
+        var product = new Core.Entities.Producto
         {
-            Code = request.Code.Trim().ToUpperInvariant(),
-            Name = request.Name.Trim(),
-            Description = request.Description?.Trim(),
-            CategoryId = request.CategoryId,
-            SupplierId = request.SupplierId,
-            PurchasePrice = request.PurchasePrice,
-            SalePrice = request.SalePrice,
-            Unit = string.IsNullOrWhiteSpace(request.Unit) ? "Unidad" : request.Unit.Trim(),
-            MinStock = request.MinStock,
-            IsActive = request.IsActive
+            Codigo = request.Code.Trim().ToUpperInvariant(),
+            Nombre = request.Name.Trim(),
+            Descripcion = request.Description?.Trim(),
+            CategoriaId = request.CategoryId,
+            ProveedorId = request.SupplierId,
+            PrecioCompra = request.PurchasePrice,
+            PrecioVenta = request.SalePrice,
+            Unidad = string.IsNullOrWhiteSpace(request.Unit) ? "Unidad" : request.Unit.Trim(),
+            StockMinimo = request.MinStock,
+            Activo = request.IsActive
         };
 
-        _db.Products.Add(product);
+        _db.Productos.Add(product);
         await _db.SaveChangesAsync(ct);
         return await GetAsync(product.Id, ct);
     }
 
     public async Task<ProductDto> UpdateAsync(int id, ProductRequest request, CancellationToken ct = default)
     {
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct)
+        var product = await _db.Productos.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException("Producto no encontrado.");
 
         await ValidateAsync(request, id, ct);
 
-        product.Code = request.Code.Trim().ToUpperInvariant();
-        product.Name = request.Name.Trim();
-        product.Description = request.Description?.Trim();
-        product.CategoryId = request.CategoryId;
-        product.SupplierId = request.SupplierId;
-        product.PurchasePrice = request.PurchasePrice;
-        product.SalePrice = request.SalePrice;
-        product.Unit = string.IsNullOrWhiteSpace(request.Unit) ? "Unidad" : request.Unit.Trim();
-        product.MinStock = request.MinStock;
-        product.IsActive = request.IsActive;
+        product.Codigo = request.Code.Trim().ToUpperInvariant();
+        product.Nombre = request.Name.Trim();
+        product.Descripcion = request.Description?.Trim();
+        product.CategoriaId = request.CategoryId;
+        product.ProveedorId = request.SupplierId;
+        product.PrecioCompra = request.PurchasePrice;
+        product.PrecioVenta = request.SalePrice;
+        product.Unidad = string.IsNullOrWhiteSpace(request.Unit) ? "Unidad" : request.Unit.Trim();
+        product.StockMinimo = request.MinStock;
+        product.Activo = request.IsActive;
 
         await _db.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
@@ -124,16 +124,16 @@ public class ProductService : IProductService
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id, ct)
+        var product = await _db.Productos.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException("Producto no encontrado.");
 
-        if (await _db.Movements.AnyAsync(m => m.ProductId == id, ct))
+        if (await _db.Movimientos.AnyAsync(m => m.ProductoId == id, ct))
         {
-            product.IsActive = false;
+            product.Activo = false;
         }
         else
         {
-            _db.Products.Remove(product);
+            _db.Productos.Remove(product);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -153,14 +153,14 @@ public class ProductService : IProductService
             throw new AppException("El stock mínimo no puede ser negativo.");
 
         var code = request.Code.Trim().ToUpperInvariant();
-        if (await _db.Products.AnyAsync(p => p.Code == code && p.Id != currentId, ct))
+        if (await _db.Productos.AnyAsync(p => p.Codigo == code && p.Id != currentId, ct))
             throw new AppException($"Ya existe un producto con el código \"{code}\".");
 
-        if (!await _db.Categories.AnyAsync(c => c.Id == request.CategoryId && c.IsActive, ct))
+        if (!await _db.Categorias.AnyAsync(c => c.Id == request.CategoryId && c.Activo, ct))
             throw new AppException("La categoría seleccionada no es válida.");
 
         if (request.SupplierId.HasValue &&
-            !await _db.Suppliers.AnyAsync(s => s.Id == request.SupplierId.Value && s.IsActive, ct))
+            !await _db.Proveedores.AnyAsync(s => s.Id == request.SupplierId.Value && s.Activo, ct))
             throw new AppException("El proveedor seleccionado no es válido.");
     }
 }

@@ -50,40 +50,40 @@ public class ReportService : IReportService
 
     private async Task<ReportTable> BuildStockAsync(ReportRequest f, bool criticalOnly, CancellationToken ct)
     {
-        var query = _db.StockLevels.AsNoTracking()
-            .Include(s => s.Product).ThenInclude(p => p.Category)
-            .Include(s => s.Product).ThenInclude(p => p.Supplier)
-            .Include(s => s.Warehouse)
+        var query = _db.NivelesStock.AsNoTracking()
+            .Include(s => s.Producto).ThenInclude(p => p.Categoria)
+            .Include(s => s.Producto).ThenInclude(p => p.Proveedor)
+            .Include(s => s.Almacen)
             .AsQueryable();
 
-        if (!f.IncludeInactive) query = query.Where(s => s.Product.IsActive && s.Warehouse.IsActive);
-        if (f.WarehouseId.HasValue) query = query.Where(s => s.WarehouseId == f.WarehouseId.Value);
-        if (f.CategoryId.HasValue) query = query.Where(s => s.Product.CategoryId == f.CategoryId.Value);
-        if (f.SupplierId.HasValue) query = query.Where(s => s.Product.SupplierId == f.SupplierId.Value);
-        if (criticalOnly || f.CriticalOnly) query = query.Where(s => s.Quantity <= s.Product.MinStock);
+        if (!f.IncludeInactive) query = query.Where(s => s.Producto.Activo && s.Almacen.Activo);
+        if (f.WarehouseId.HasValue) query = query.Where(s => s.AlmacenId == f.WarehouseId.Value);
+        if (f.CategoryId.HasValue) query = query.Where(s => s.Producto.CategoriaId == f.CategoryId.Value);
+        if (f.SupplierId.HasValue) query = query.Where(s => s.Producto.ProveedorId == f.SupplierId.Value);
+        if (criticalOnly || f.CriticalOnly) query = query.Where(s => s.Cantidad <= s.Producto.StockMinimo);
 
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
             var term = f.Search.Trim().ToLower();
             query = query.Where(s =>
-                s.Product.Name.ToLower().Contains(term) ||
-                s.Product.Code.ToLower().Contains(term));
+                s.Producto.Nombre.ToLower().Contains(term) ||
+                s.Producto.Codigo.ToLower().Contains(term));
         }
 
         var data = await query
-            .OrderBy(s => s.Product.Code)
-            .ThenBy(s => s.Warehouse.Code)
+            .OrderBy(s => s.Producto.Codigo)
+            .ThenBy(s => s.Almacen.Codigo)
             .Select(s => new
             {
-                s.Product.Code,
-                s.Product.Name,
-                Category = s.Product.Category.Name,
-                Supplier = s.Product.Supplier != null ? s.Product.Supplier.Name : "—",
-                s.Product.Unit,
-                Warehouse = s.Warehouse.Name,
-                s.Quantity,
-                s.Product.MinStock,
-                s.Product.SalePrice
+                s.Producto.Codigo,
+                s.Producto.Nombre,
+                Category = s.Producto.Categoria.Nombre,
+                Supplier = s.Producto.Proveedor != null ? s.Producto.Proveedor.Nombre : "—",
+                s.Producto.Unidad,
+                Warehouse = s.Almacen.Nombre,
+                s.Cantidad,
+                s.Producto.StockMinimo,
+                s.Producto.PrecioVenta
             })
             .ToListAsync(ct);
 
@@ -104,27 +104,27 @@ public class ReportService : IReportService
 
         foreach (var row in data)
         {
-            var value = row.Quantity * row.SalePrice;
+            var value = row.Cantidad * row.PrecioVenta;
             totalValue += value;
-            totalUnits += row.Quantity;
+            totalUnits += row.Cantidad;
 
             table.Rows.Add(new List<string>
             {
-                row.Code,
-                row.Name,
+                row.Codigo,
+                row.Nombre,
                 row.Category,
                 row.Supplier,
                 row.Warehouse,
-                row.Unit,
-                row.Quantity.ToString("N0", Es),
-                row.MinStock.ToString("N0", Es),
-                row.SalePrice.ToString("N2", Es),
+                row.Unidad,
+                row.Cantidad.ToString("N0", Es),
+                row.StockMinimo.ToString("N0", Es),
+                row.PrecioVenta.ToString("N2", Es),
                 value.ToString("N0", Es),
-                StatusText(row.Quantity, row.MinStock)
+                StatusText(row.Cantidad, row.StockMinimo)
             });
         }
 
-        table.Summary.Add(("SKU con stock", data.Select(d => d.Code).Distinct().Count().ToString("N0", Es)));
+        table.Summary.Add(("SKU con stock", data.Select(d => d.Codigo).Distinct().Count().ToString("N0", Es)));
         table.Summary.Add(("Unidades totales", totalUnits.ToString("N0", Es)));
         table.Summary.Add(("Valor de stock", "$" + totalValue.ToString("N0", Es)));
 
@@ -133,43 +133,43 @@ public class ReportService : IReportService
 
     private async Task<ReportTable> BuildMovementsAsync(ReportRequest f, CancellationToken ct)
     {
-        var query = _db.Movements.AsNoTracking()
-            .Include(m => m.Product)
-            .Include(m => m.Warehouse)
-            .Include(m => m.User)
+        var query = _db.Movimientos.AsNoTracking()
+            .Include(m => m.Producto)
+            .Include(m => m.Almacen)
+            .Include(m => m.Usuario)
             .AsQueryable();
 
-        if (f.ProductId.HasValue) query = query.Where(m => m.ProductId == f.ProductId.Value);
-        if (f.WarehouseId.HasValue) query = query.Where(m => m.WarehouseId == f.WarehouseId.Value);
-        if (f.UserId.HasValue) query = query.Where(m => m.UserId == f.UserId.Value);
-        if (f.Type.HasValue) query = query.Where(m => m.Type == f.Type.Value);
-        if (f.From.HasValue) query = query.Where(m => m.Date >= f.From.Value.ToUniversalTime());
-        if (f.To.HasValue) query = query.Where(m => m.Date <= f.To.Value.ToUniversalTime().AddDays(1).AddTicks(-1));
+        if (f.ProductId.HasValue) query = query.Where(m => m.ProductoId == f.ProductId.Value);
+        if (f.WarehouseId.HasValue) query = query.Where(m => m.AlmacenId == f.WarehouseId.Value);
+        if (f.UserId.HasValue) query = query.Where(m => m.UsuarioId == f.UserId.Value);
+        if (f.Type.HasValue) query = query.Where(m => m.Tipo == f.Type.Value);
+        if (f.From.HasValue) query = query.Where(m => m.Fecha >= f.From.Value.ToUniversalTime());
+        if (f.To.HasValue) query = query.Where(m => m.Fecha <= f.To.Value.ToUniversalTime().AddDays(1).AddTicks(-1));
 
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
             var term = f.Search.Trim().ToLower();
             query = query.Where(m =>
-                m.Product.Name.ToLower().Contains(term) ||
-                m.Product.Code.ToLower().Contains(term) ||
-                m.Reason.ToLower().Contains(term) ||
-                (m.DocumentReference != null && m.DocumentReference.ToLower().Contains(term)));
+                m.Producto.Nombre.ToLower().Contains(term) ||
+                m.Producto.Codigo.ToLower().Contains(term) ||
+                m.Motivo.ToLower().Contains(term) ||
+                (m.DocumentoReferencia != null && m.DocumentoReferencia.ToLower().Contains(term)));
         }
 
-        var data = await query.OrderByDescending(m => m.Date)
+        var data = await query.OrderByDescending(m => m.Fecha)
             .Select(m => new
             {
-                m.Date,
-                Type = m.Type.ToString(),
-                m.Product.Code,
-                Product = m.Product.Name,
-                Warehouse = m.Warehouse.Name,
-                User = m.User.FullName,
-                m.Quantity,
-                m.UnitPrice,
-                m.StockAfter,
-                m.Reason,
-                m.DocumentReference
+                m.Fecha,
+                Type = m.Tipo.ToString(),
+                m.Producto.Codigo,
+                Product = m.Producto.Nombre,
+                Warehouse = m.Almacen.Nombre,
+                User = m.Usuario.NombreCompleto,
+                m.Cantidad,
+                m.PrecioUnitario,
+                m.StockResultante,
+                m.Motivo,
+                m.DocumentoReferencia
             })
             .ToListAsync(ct);
 
@@ -192,32 +192,32 @@ public class ReportService : IReportService
 
         foreach (var row in data)
         {
-            var total = row.Quantity * row.UnitPrice;
+            var total = row.Cantidad * row.PrecioUnitario;
             if (row.Type == nameof(MovementType.Entrada))
             {
-                entries += row.Quantity;
+                entries += row.Cantidad;
                 entriesValue += total;
             }
             else
             {
-                exits += row.Quantity;
+                exits += row.Cantidad;
                 exitsValue += total;
             }
 
             table.Rows.Add(new List<string>
             {
-                row.Date.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
+                row.Fecha.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
                 row.Type,
-                row.Code,
+                row.Codigo,
                 row.Product,
                 row.Warehouse,
                 row.User,
-                row.Quantity.ToString("N0", Es),
-                row.UnitPrice.ToString("N2", Es),
+                row.Cantidad.ToString("N0", Es),
+                row.PrecioUnitario.ToString("N2", Es),
                 total.ToString("N0", Es),
-                row.StockAfter.ToString("N0", Es),
-                row.Reason,
-                row.DocumentReference ?? "—"
+                row.StockResultante.ToString("N0", Es),
+                row.Motivo,
+                row.DocumentoReferencia ?? "—"
             });
         }
 
@@ -232,24 +232,24 @@ public class ReportService : IReportService
 
     private async Task<ReportTable> BuildProductsAsync(ReportRequest f, CancellationToken ct)
     {
-        var query = _db.Products.AsNoTracking()
-            .Include(p => p.Category)
-            .Include(p => p.Supplier)
-            .Include(p => p.StockLevels)
+        var query = _db.Productos.AsNoTracking()
+            .Include(p => p.Categoria)
+            .Include(p => p.Proveedor)
+            .Include(p => p.NivelesStock)
             .AsQueryable();
 
-        if (!f.IncludeInactive) query = query.Where(p => p.IsActive);
-        if (f.CategoryId.HasValue) query = query.Where(p => p.CategoryId == f.CategoryId.Value);
-        if (f.SupplierId.HasValue) query = query.Where(p => p.SupplierId == f.SupplierId.Value);
+        if (!f.IncludeInactive) query = query.Where(p => p.Activo);
+        if (f.CategoryId.HasValue) query = query.Where(p => p.CategoriaId == f.CategoryId.Value);
+        if (f.SupplierId.HasValue) query = query.Where(p => p.ProveedorId == f.SupplierId.Value);
 
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
             var term = f.Search.Trim().ToLower();
             query = query.Where(p =>
-                p.Name.ToLower().Contains(term) || p.Code.ToLower().Contains(term));
+                p.Nombre.ToLower().Contains(term) || p.Codigo.ToLower().Contains(term));
         }
 
-        var data = await query.OrderBy(p => p.Code).ToListAsync(ct);
+        var data = await query.OrderBy(p => p.Codigo).ToListAsync(ct);
 
         var table = new ReportTable
         {
@@ -265,19 +265,19 @@ public class ReportService : IReportService
 
         foreach (var p in data)
         {
-            var stock = p.StockLevels.Sum(s => s.Quantity);
+            var stock = p.NivelesStock.Sum(s => s.Cantidad);
             table.Rows.Add(new List<string>
             {
-                p.Code,
-                p.Name,
-                p.Category.Name,
-                p.Supplier?.Name ?? "—",
-                p.Unit,
+                p.Codigo,
+                p.Nombre,
+                p.Categoria.Nombre,
+                p.Proveedor?.Nombre ?? "—",
+                p.Unidad,
                 stock.ToString("N0", Es),
-                p.MinStock.ToString("N0", Es),
-                p.PurchasePrice.ToString("N2", Es),
-                p.SalePrice.ToString("N2", Es),
-                p.IsActive ? Mapping.ProductStatus(stock, p.MinStock) switch
+                p.StockMinimo.ToString("N0", Es),
+                p.PrecioCompra.ToString("N2", Es),
+                p.PrecioVenta.ToString("N2", Es),
+                p.Activo ? Mapping.ProductStatus(stock, p.StockMinimo) switch
                 {
                     "ok" => "Activo / OK",
                     "low" => "Stock bajo",
@@ -288,17 +288,17 @@ public class ReportService : IReportService
         }
 
         table.Summary.Add(("Productos", data.Count.ToString("N0", Es)));
-        table.Summary.Add(("Activos", data.Count(p => p.IsActive).ToString("N0", Es)));
-        table.Summary.Add(("Con stock bajo", data.Count(p => p.StockLevels.Sum(s => s.Quantity) <= p.MinStock).ToString("N0", Es)));
+        table.Summary.Add(("Activos", data.Count(p => p.Activo).ToString("N0", Es)));
+        table.Summary.Add(("Con stock bajo", data.Count(p => p.NivelesStock.Sum(s => s.Cantidad) <= p.StockMinimo).ToString("N0", Es)));
 
         return table;
     }
 
     private async Task<ReportTable> BuildCategoriesAsync(ReportRequest f, CancellationToken ct)
     {
-        var query = _db.Categories.AsNoTracking().Include(c => c.Products).AsQueryable();
-        if (!f.IncludeInactive) query = query.Where(c => c.IsActive);
-        var data = await query.OrderBy(c => c.Name).ToListAsync(ct);
+        var query = _db.Categorias.AsNoTracking().Include(c => c.Productos).AsQueryable();
+        if (!f.IncludeInactive) query = query.Where(c => c.Activo);
+        var data = await query.OrderBy(c => c.Nombre).ToListAsync(ct);
 
         var table = new ReportTable
         {
@@ -312,32 +312,32 @@ public class ReportService : IReportService
         {
             table.Rows.Add(new List<string>
             {
-                c.Name,
-                c.Description ?? "—",
-                c.Products.Count(p => p.IsActive).ToString("N0", Es),
-                c.Products.Count.ToString("N0", Es),
-                c.IsActive ? "Activa" : "Inactiva"
+                c.Nombre,
+                c.Descripcion ?? "—",
+                c.Productos.Count(p => p.Activo).ToString("N0", Es),
+                c.Productos.Count.ToString("N0", Es),
+                c.Activo ? "Activa" : "Inactiva"
             });
         }
 
         table.Summary.Add(("Categorías", data.Count.ToString("N0", Es)));
-        table.Summary.Add(("Activas", data.Count(c => c.IsActive).ToString("N0", Es)));
+        table.Summary.Add(("Activas", data.Count(c => c.Activo).ToString("N0", Es)));
 
         return table;
     }
 
     private async Task<ReportTable> BuildSuppliersAsync(ReportRequest f, CancellationToken ct)
     {
-        var query = _db.Suppliers.AsNoTracking().Include(s => s.Products).AsQueryable();
-        if (!f.IncludeInactive) query = query.Where(s => s.IsActive);
+        var query = _db.Proveedores.AsNoTracking().Include(s => s.Productos).AsQueryable();
+        if (!f.IncludeInactive) query = query.Where(s => s.Activo);
 
         if (!string.IsNullOrWhiteSpace(f.Search))
         {
             var term = f.Search.Trim().ToLower();
-            query = query.Where(s => s.Name.ToLower().Contains(term));
+            query = query.Where(s => s.Nombre.ToLower().Contains(term));
         }
 
-        var data = await query.OrderBy(s => s.Name).ToListAsync(ct);
+        var data = await query.OrderBy(s => s.Nombre).ToListAsync(ct);
 
         var table = new ReportTable
         {
@@ -351,28 +351,28 @@ public class ReportService : IReportService
         {
             table.Rows.Add(new List<string>
             {
-                s.Name,
-                s.ContactName ?? "—",
-                s.Phone ?? "—",
-                s.Email ?? "—",
-                s.Address ?? "—",
-                s.Products.Count(p => p.IsActive).ToString("N0", Es),
-                s.IsActive ? "Activo" : "Inactivo"
+                s.Nombre,
+                s.NombreContacto ?? "—",
+                s.Telefono ?? "—",
+                s.Correo ?? "—",
+                s.Direccion ?? "—",
+                s.Productos.Count(p => p.Activo).ToString("N0", Es),
+                s.Activo ? "Activo" : "Inactivo"
             });
         }
 
         table.Summary.Add(("Proveedores", data.Count.ToString("N0", Es)));
-        table.Summary.Add(("Activos", data.Count(s => s.IsActive).ToString("N0", Es)));
+        table.Summary.Add(("Activos", data.Count(s => s.Activo).ToString("N0", Es)));
 
         return table;
     }
 
     private async Task<ReportTable> BuildUsersAsync(ReportRequest f, CancellationToken ct)
     {
-        var query = _db.Users.AsNoTracking().Include(u => u.Role).AsQueryable();
-        if (!f.IncludeInactive) query = query.Where(u => u.IsActive);
+        var query = _db.Usuarios.AsNoTracking().Include(u => u.Rol).AsQueryable();
+        if (!f.IncludeInactive) query = query.Where(u => u.Activo);
 
-        var data = await query.OrderBy(u => u.Username).ToListAsync(ct);
+        var data = await query.OrderBy(u => u.NombreUsuario).ToListAsync(ct);
 
         var table = new ReportTable
         {
@@ -386,17 +386,17 @@ public class ReportService : IReportService
         {
             table.Rows.Add(new List<string>
             {
-                u.Username,
-                u.FullName,
-                u.Email ?? "—",
-                u.Role.Name,
-                u.IsActive ? "Activo" : "Inactivo",
-                u.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                u.NombreUsuario,
+                u.NombreCompleto,
+                u.Correo ?? "—",
+                u.Rol.Nombre,
+                u.Activo ? "Activo" : "Inactivo",
+                u.FechaCreacion.ToLocalTime().ToString("dd/MM/yyyy")
             });
         }
 
         table.Summary.Add(("Usuarios", data.Count.ToString("N0", Es)));
-        table.Summary.Add(("Activos", data.Count(u => u.IsActive).ToString("N0", Es)));
+        table.Summary.Add(("Activos", data.Count(u => u.Activo).ToString("N0", Es)));
 
         return table;
     }

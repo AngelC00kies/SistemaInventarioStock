@@ -24,69 +24,69 @@ public class MovementService : IMovementService
         if (request.Type != MovementType.Entrada && request.Type != MovementType.Salida)
             throw new AppException("Tipo de movimiento no válido.");
 
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == request.ProductId, ct)
+        var product = await _db.Productos.FirstOrDefaultAsync(p => p.Id == request.ProductId, ct)
             ?? throw new NotFoundException("Producto no encontrado.");
-        if (!product.IsActive)
+        if (!product.Activo)
             throw new AppException("No se pueden registrar movimientos de un producto inactivo.");
 
-        var warehouse = await _db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, ct)
+        var warehouse = await _db.Almacenes.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, ct)
             ?? throw new NotFoundException("Almacén no encontrado.");
-        if (!warehouse.IsActive)
+        if (!warehouse.Activo)
             throw new AppException("No se pueden registrar movimientos en un almacén inactivo.");
 
-        var stock = await _db.StockLevels
-            .FirstOrDefaultAsync(s => s.ProductId == request.ProductId && s.WarehouseId == request.WarehouseId, ct);
+        var stock = await _db.NivelesStock
+            .FirstOrDefaultAsync(s => s.ProductoId == request.ProductId && s.AlmacenId == request.WarehouseId, ct);
 
         if (request.Type == MovementType.Salida)
         {
-            var available = stock?.Quantity ?? 0;
+            var available = stock?.Cantidad ?? 0;
             if (request.Quantity > available)
                 throw new AppException(
-                    $"Stock insuficiente. Disponible: {available} {product.Unit.ToLower()} en {warehouse.Name}.");
+                    $"Stock insuficiente. Disponible: {available} {product.Unidad.ToLower()} en {warehouse.Nombre}.");
         }
 
         await using var transaction = await _db.Database.BeginTransactionAsync(ct);
 
         var isNewStock = stock is null;
-        stock ??= new StockLevel
+        stock ??= new NivelStock
         {
-            ProductId = request.ProductId,
-            WarehouseId = request.WarehouseId,
-            Quantity = 0
+            ProductoId = request.ProductId,
+            AlmacenId = request.WarehouseId,
+            Cantidad = 0
         };
-        if (isNewStock) _db.StockLevels.Add(stock);
+        if (isNewStock) _db.NivelesStock.Add(stock);
 
-        stock.Quantity += request.Type == MovementType.Entrada ? request.Quantity : -request.Quantity;
+        stock.Cantidad += request.Type == MovementType.Entrada ? request.Quantity : -request.Quantity;
 
         var unitPrice = request.UnitPrice ??
-                        (request.Type == MovementType.Entrada ? product.PurchasePrice : product.SalePrice);
+                        (request.Type == MovementType.Entrada ? product.PrecioCompra : product.PrecioVenta);
 
-        var movement = new Movement
+        var movement = new Movimiento
         {
-            Date = request.Date ?? DateTime.UtcNow,
-            Type = request.Type,
-            Reason = request.Reason.Trim(),
-            Quantity = request.Quantity,
-            ProductId = request.ProductId,
-            WarehouseId = request.WarehouseId,
-            UserId = userId,
-            DocumentReference = string.IsNullOrWhiteSpace(request.DocumentReference)
+            Fecha = request.Date ?? DateTime.UtcNow,
+            Tipo = request.Type,
+            Motivo = request.Reason.Trim(),
+            Cantidad = request.Quantity,
+            ProductoId = request.ProductId,
+            AlmacenId = request.WarehouseId,
+            UsuarioId = userId,
+            DocumentoReferencia = string.IsNullOrWhiteSpace(request.DocumentReference)
                 ? null
                 : request.DocumentReference.Trim(),
-            StockAfter = stock.Quantity,
-            UnitPrice = unitPrice
+            StockResultante = stock.Cantidad,
+            PrecioUnitario = unitPrice
         };
 
-        _db.Movements.Add(movement);
+        _db.Movimientos.Add(movement);
 
-        await CheckLowStockAsync(product, warehouse.Id, stock.Quantity, ct);
+        await CheckLowStockAsync(product, warehouse.Id, stock.Cantidad, ct);
         await _db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
-        var created = await _db.Movements.AsNoTracking()
-            .Include(m => m.Product)
-            .Include(m => m.Warehouse)
-            .Include(m => m.User)
+        var created = await _db.Movimientos.AsNoTracking()
+            .Include(m => m.Producto)
+            .Include(m => m.Almacen)
+            .Include(m => m.Usuario)
             .FirstAsync(m => m.Id == movement.Id, ct);
 
         return Mapping.ToDto(created);
@@ -97,36 +97,36 @@ public class MovementService : IMovementService
         var page = Math.Max(1, filter.Page);
         var pageSize = Math.Clamp(filter.PageSize, 1, 200);
 
-        var query = _db.Movements.AsNoTracking()
-            .Include(m => m.Product)
-            .Include(m => m.Warehouse)
-            .Include(m => m.User)
+        var query = _db.Movimientos.AsNoTracking()
+            .Include(m => m.Producto)
+            .Include(m => m.Almacen)
+            .Include(m => m.Usuario)
             .AsQueryable();
 
-        if (filter.ProductId.HasValue) query = query.Where(m => m.ProductId == filter.ProductId.Value);
-        if (filter.WarehouseId.HasValue) query = query.Where(m => m.WarehouseId == filter.WarehouseId.Value);
-        if (filter.UserId.HasValue) query = query.Where(m => m.UserId == filter.UserId.Value);
-        if (filter.Type.HasValue) query = query.Where(m => m.Type == filter.Type.Value);
-        if (filter.From.HasValue) query = query.Where(m => m.Date >= filter.From.Value.ToUniversalTime());
+        if (filter.ProductId.HasValue) query = query.Where(m => m.ProductoId == filter.ProductId.Value);
+        if (filter.WarehouseId.HasValue) query = query.Where(m => m.AlmacenId == filter.WarehouseId.Value);
+        if (filter.UserId.HasValue) query = query.Where(m => m.UsuarioId == filter.UserId.Value);
+        if (filter.Type.HasValue) query = query.Where(m => m.Tipo == filter.Type.Value);
+        if (filter.From.HasValue) query = query.Where(m => m.Fecha >= filter.From.Value.ToUniversalTime());
         if (filter.To.HasValue)
         {
             var to = filter.To.Value.ToUniversalTime().AddDays(1).AddTicks(-1);
-            query = query.Where(m => m.Date <= to);
+            query = query.Where(m => m.Fecha <= to);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
             var term = filter.Search.Trim().ToLower();
             query = query.Where(m =>
-                m.Product.Name.ToLower().Contains(term) ||
-                m.Product.Code.ToLower().Contains(term) ||
-                m.Reason.ToLower().Contains(term) ||
-                (m.DocumentReference != null && m.DocumentReference.ToLower().Contains(term)));
+                m.Producto.Nombre.ToLower().Contains(term) ||
+                m.Producto.Codigo.ToLower().Contains(term) ||
+                m.Motivo.ToLower().Contains(term) ||
+                (m.DocumentoReferencia != null && m.DocumentoReferencia.ToLower().Contains(term)));
         }
 
         var total = await query.CountAsync(ct);
         var items = await query
-            .OrderByDescending(m => m.Date)
+            .OrderByDescending(m => m.Fecha)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(m => Mapping.ToDto(m))
@@ -137,44 +137,44 @@ public class MovementService : IMovementService
 
     public async Task<MovementDto> GetAsync(int id, CancellationToken ct = default)
     {
-        var movement = await _db.Movements.AsNoTracking()
-            .Include(m => m.Product)
-            .Include(m => m.Warehouse)
-            .Include(m => m.User)
+        var movement = await _db.Movimientos.AsNoTracking()
+            .Include(m => m.Producto)
+            .Include(m => m.Almacen)
+            .Include(m => m.Usuario)
             .FirstOrDefaultAsync(m => m.Id == id, ct)
             ?? throw new NotFoundException("Movimiento no encontrado.");
 
         return Mapping.ToDto(movement);
     }
 
-    private async Task CheckLowStockAsync(Product product, int warehouseId, int quantity, CancellationToken ct)
+    private async Task CheckLowStockAsync(Producto product, int warehouseId, int quantity, CancellationToken ct)
     {
-        var pending = await _db.Notifications.AnyAsync(n =>
-            n.ProductId == product.Id &&
-            n.WarehouseId == warehouseId &&
-            !n.IsRead, ct);
+        var pending = await _db.Notificaciones.AnyAsync(n =>
+            n.ProductoId == product.Id &&
+            n.AlmacenId == warehouseId &&
+            !n.Leida, ct);
 
-        if (quantity > product.MinStock)
+        if (quantity > product.StockMinimo)
         {
             if (pending)
             {
-                var toClose = await _db.Notifications
-                    .Where(n => n.ProductId == product.Id && n.WarehouseId == warehouseId && !n.IsRead)
+                var toClose = await _db.Notificaciones
+                    .Where(n => n.ProductoId == product.Id && n.AlmacenId == warehouseId && !n.Leida)
                     .ToListAsync(ct);
-                toClose.ForEach(n => n.IsRead = true);
+                toClose.ForEach(n => n.Leida = true);
             }
             return;
         }
 
         if (pending) return;
 
-        _db.Notifications.Add(new AppNotification
+        _db.Notificaciones.Add(new Notificacion
         {
-            ProductId = product.Id,
-            WarehouseId = warehouseId,
-            Level = quantity <= Math.Max(1, product.MinStock / 2) ? NotificationLevel.Critical : NotificationLevel.Warning,
-            Message = $"Stock bajo: \"{product.Name}\" tiene {quantity} {product.Unit.ToLower()} " +
-                      $"(mínimo {product.MinStock})."
+            ProductoId = product.Id,
+            AlmacenId = warehouseId,
+            Nivel = quantity <= Math.Max(1, product.StockMinimo / 2) ? NotificationLevel.Critical : NotificationLevel.Warning,
+            Mensaje = $"Stock bajo: \"{product.Nombre}\" tiene {quantity} {product.Unidad.ToLower()} " +
+                      $"(mínimo {product.StockMinimo})."
         });
     }
 }

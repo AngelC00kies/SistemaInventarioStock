@@ -14,23 +14,23 @@ public class CategoryService : ICategoryService
 
     public async Task<List<CategoryDto>> GetAsync(string? search, bool includeInactive, CancellationToken ct = default)
     {
-        var query = _db.Categories.AsNoTracking().Include(c => c.Products).AsQueryable();
+        var query = _db.Categorias.AsNoTracking().Include(c => c.Productos).AsQueryable();
 
-        if (!includeInactive) query = query.Where(c => c.IsActive);
+        if (!includeInactive) query = query.Where(c => c.Activo);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToLower();
-            query = query.Where(c => c.Name.ToLower().Contains(term));
+            query = query.Where(c => c.Nombre.ToLower().Contains(term));
         }
 
-        var items = await query.OrderBy(c => c.Name).ToListAsync(ct);
+        var items = await query.OrderBy(c => c.Nombre).ToListAsync(ct);
         return items.Select(Mapping.ToDto).ToList();
     }
 
     public async Task<CategoryDto> GetAsync(int id, CancellationToken ct = default)
     {
-        var category = await _db.Categories.AsNoTracking().Include(c => c.Products)
+        var category = await _db.Categorias.AsNoTracking().Include(c => c.Productos)
             .FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new NotFoundException("Categoría no encontrada.");
         return Mapping.ToDto(category);
@@ -40,28 +40,28 @@ public class CategoryService : ICategoryService
     {
         await ValidateAsync(request, null, ct);
 
-        var category = new Core.Entities.Category
+        var category = new Core.Entities.Categoria
         {
-            Name = request.Name.Trim(),
-            Description = request.Description?.Trim(),
-            IsActive = request.IsActive
+            Nombre = request.Name.Trim(),
+            Descripcion = request.Description?.Trim(),
+            Activo = request.IsActive
         };
 
-        _db.Categories.Add(category);
+        _db.Categorias.Add(category);
         await _db.SaveChangesAsync(ct);
         return await GetAsync(category.Id, ct);
     }
 
     public async Task<CategoryDto> UpdateAsync(int id, CategoryRequest request, CancellationToken ct = default)
     {
-        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == id, ct)
+        var category = await _db.Categorias.FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new NotFoundException("Categoría no encontrada.");
 
         await ValidateAsync(request, id, ct);
 
-        category.Name = request.Name.Trim();
-        category.Description = request.Description?.Trim();
-        category.IsActive = request.IsActive;
+        category.Nombre = request.Name.Trim();
+        category.Descripcion = request.Description?.Trim();
+        category.Activo = request.IsActive;
 
         await _db.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
@@ -69,16 +69,16 @@ public class CategoryService : ICategoryService
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == id, ct)
+        var category = await _db.Categorias.FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new NotFoundException("Categoría no encontrada.");
 
-        if (await _db.Products.AnyAsync(p => p.CategoryId == id, ct))
+        if (await _db.Productos.AnyAsync(p => p.CategoriaId == id, ct))
         {
-            category.IsActive = false;
+            category.Activo = false;
         }
         else
         {
-            _db.Categories.Remove(category);
+            _db.Categorias.Remove(category);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -90,7 +90,7 @@ public class CategoryService : ICategoryService
             throw new AppException("El nombre de la categoría es obligatorio.");
 
         var name = request.Name.Trim().ToLower();
-        if (await _db.Categories.AnyAsync(c => c.Name.ToLower() == name && c.Id != currentId, ct))
+        if (await _db.Categorias.AnyAsync(c => c.Nombre.ToLower() == name && c.Id != currentId, ct))
             throw new AppException($"Ya existe una categoría llamada \"{request.Name.Trim()}\".");
     }
 }

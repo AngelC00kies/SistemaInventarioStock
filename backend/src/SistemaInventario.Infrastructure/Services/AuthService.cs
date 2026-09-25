@@ -20,15 +20,15 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
     {
-        var user = await _db.Users
-            .Include(u => u.Role)
+        var user = await _db.Usuarios
+            .Include(u => u.Rol)
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Username == request.Username, ct);
+            .FirstOrDefaultAsync(u => u.NombreUsuario == request.Username, ct);
 
-        if (user is null || !PasswordHasher.Verify(request.Password, user.PasswordHash))
+        if (user is null || !PasswordHasher.Verify(request.Password, user.ContrasenaHash))
             throw new AppException("Usuario o contraseña incorrectos.", 401);
 
-        if (!user.IsActive)
+        if (!user.Activo)
             throw new AppException("La cuenta está deshabilitada. Contacte al administrador.", 403);
 
         var (token, expires) = _tokens.Generate(user);
@@ -43,8 +43,8 @@ public class AuthService : IAuthService
 
     public async Task<UserDto> GetMeAsync(int userId, CancellationToken ct = default)
     {
-        var user = await _db.Users
-            .Include(u => u.Role)
+        var user = await _db.Usuarios
+            .Include(u => u.Rol)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new NotFoundException("Usuario no encontrado.");

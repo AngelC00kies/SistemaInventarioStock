@@ -8,126 +8,126 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<Role> Roles => Set<Role>();
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Category> Categories => Set<Category>();
-    public DbSet<Supplier> Suppliers => Set<Supplier>();
-    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
-    public DbSet<Product> Products => Set<Product>();
-    public DbSet<StockLevel> StockLevels => Set<StockLevel>();
-    public DbSet<Movement> Movements => Set<Movement>();
-    public DbSet<AppNotification> Notifications => Set<AppNotification>();
+    public DbSet<Rol> Roles => Set<Rol>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<Categoria> Categorias => Set<Categoria>();
+    public DbSet<Proveedor> Proveedores => Set<Proveedor>();
+    public DbSet<Almacen> Almacenes => Set<Almacen>();
+    public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<NivelStock> NivelesStock => Set<NivelStock>();
+    public DbSet<Movimiento> Movimientos => Set<Movimiento>();
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Role>(e =>
+        modelBuilder.Entity<Rol>(e =>
         {
             e.ToTable("Roles");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(50).IsRequired();
-            e.HasIndex(x => x.Name).IsUnique();
+            e.Property(x => x.Nombre).HasMaxLength(50).IsRequired();
+            e.HasIndex(x => x.Nombre).IsUnique();
         });
 
-        modelBuilder.Entity<User>(e =>
+        modelBuilder.Entity<Usuario>(e =>
         {
-            e.ToTable("Users");
+            e.ToTable("Usuarios");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Username).HasMaxLength(60).IsRequired();
-            e.Property(x => x.PasswordHash).HasMaxLength(200).IsRequired();
-            e.Property(x => x.FullName).HasMaxLength(150).IsRequired();
-            e.Property(x => x.Email).HasMaxLength(150);
-            e.HasIndex(x => x.Username).IsUnique();
-            e.HasOne(x => x.Role).WithMany(r => r.Users).HasForeignKey(x => x.RoleId)
+            e.Property(x => x.NombreUsuario).HasMaxLength(60).IsRequired();
+            e.Property(x => x.ContrasenaHash).HasMaxLength(200).IsRequired();
+            e.Property(x => x.NombreCompleto).HasMaxLength(150).IsRequired();
+            e.Property(x => x.Correo).HasMaxLength(150);
+            e.HasIndex(x => x.NombreUsuario).IsUnique();
+            e.HasOne(x => x.Rol).WithMany(r => r.Usuarios).HasForeignKey(x => x.RolId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<Category>(e =>
+        modelBuilder.Entity<Categoria>(e =>
         {
-            e.ToTable("Categories");
+            e.ToTable("Categorias");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            e.Property(x => x.Description).HasMaxLength(400);
-            e.HasIndex(x => x.Name).IsUnique();
+            e.Property(x => x.Nombre).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Descripcion).HasMaxLength(400);
+            e.HasIndex(x => x.Nombre).IsUnique();
         });
 
-        modelBuilder.Entity<Supplier>(e =>
+        modelBuilder.Entity<Proveedor>(e =>
         {
-            e.ToTable("Suppliers");
+            e.ToTable("Proveedores");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(150).IsRequired();
-            e.Property(x => x.ContactName).HasMaxLength(150);
-            e.Property(x => x.Phone).HasMaxLength(50);
-            e.Property(x => x.Email).HasMaxLength(150);
-            e.Property(x => x.Address).HasMaxLength(300);
-            e.HasIndex(x => x.Name).IsUnique();
+            e.Property(x => x.Nombre).HasMaxLength(150).IsRequired();
+            e.Property(x => x.NombreContacto).HasMaxLength(150);
+            e.Property(x => x.Telefono).HasMaxLength(50);
+            e.Property(x => x.Correo).HasMaxLength(150);
+            e.Property(x => x.Direccion).HasMaxLength(300);
+            e.HasIndex(x => x.Nombre).IsUnique();
         });
 
-        modelBuilder.Entity<Warehouse>(e =>
+        modelBuilder.Entity<Almacen>(e =>
         {
-            e.ToTable("Warehouses");
+            e.ToTable("Almacenes");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Name).HasMaxLength(120).IsRequired();
-            e.Property(x => x.Code).HasMaxLength(30).IsRequired();
-            e.Property(x => x.Location).HasMaxLength(200);
-            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Nombre).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Codigo).HasMaxLength(30).IsRequired();
+            e.Property(x => x.Ubicacion).HasMaxLength(200);
+            e.HasIndex(x => x.Codigo).IsUnique();
         });
 
-        modelBuilder.Entity<Product>(e =>
+        modelBuilder.Entity<Producto>(e =>
         {
-            e.ToTable("Products");
+            e.ToTable("Productos");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Code).HasMaxLength(40).IsRequired();
-            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
-            e.Property(x => x.Description).HasMaxLength(800);
-            e.Property(x => x.Unit).HasMaxLength(30).IsRequired();
-            e.Property(x => x.PurchasePrice).HasPrecision(18, 2);
-            e.Property(x => x.SalePrice).HasPrecision(18, 2);
-            e.HasIndex(x => x.Code).IsUnique();
-            e.HasOne(x => x.Category).WithMany(c => c.Products).HasForeignKey(x => x.CategoryId)
+            e.Property(x => x.Codigo).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Nombre).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Descripcion).HasMaxLength(800);
+            e.Property(x => x.Unidad).HasMaxLength(30).IsRequired();
+            e.Property(x => x.PrecioCompra).HasPrecision(18, 2);
+            e.Property(x => x.PrecioVenta).HasPrecision(18, 2);
+            e.HasIndex(x => x.Codigo).IsUnique();
+            e.HasOne(x => x.Categoria).WithMany(c => c.Productos).HasForeignKey(x => x.CategoriaId)
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(x => x.Supplier).WithMany(s => s.Products).HasForeignKey(x => x.SupplierId)
+            e.HasOne(x => x.Proveedor).WithMany(s => s.Productos).HasForeignKey(x => x.ProveedorId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
-        modelBuilder.Entity<StockLevel>(e =>
+        modelBuilder.Entity<NivelStock>(e =>
         {
-            e.ToTable("StockLevels");
-            e.HasKey(x => new { x.ProductId, x.WarehouseId });
-            e.HasOne(x => x.Product).WithMany(p => p.StockLevels).HasForeignKey(x => x.ProductId)
+            e.ToTable("NivelesStock");
+            e.HasKey(x => new { x.ProductoId, x.AlmacenId });
+            e.HasOne(x => x.Producto).WithMany(p => p.NivelesStock).HasForeignKey(x => x.ProductoId)
                 .OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(x => x.Warehouse).WithMany(w => w.StockLevels).HasForeignKey(x => x.WarehouseId)
+            e.HasOne(x => x.Almacen).WithMany(w => w.NivelesStock).HasForeignKey(x => x.AlmacenId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<Movement>(e =>
+        modelBuilder.Entity<Movimiento>(e =>
         {
-            e.ToTable("Movements");
+            e.ToTable("Movimientos");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Reason).HasMaxLength(300).IsRequired();
-            e.Property(x => x.DocumentReference).HasMaxLength(80);
-            e.Property(x => x.UnitPrice).HasPrecision(18, 2);
-            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
-            e.HasIndex(x => x.Date);
-            e.HasOne(x => x.Product).WithMany(p => p.Movements).HasForeignKey(x => x.ProductId)
+            e.Property(x => x.Motivo).HasMaxLength(300).IsRequired();
+            e.Property(x => x.DocumentoReferencia).HasMaxLength(80);
+            e.Property(x => x.PrecioUnitario).HasPrecision(18, 2);
+            e.Property(x => x.Tipo).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => x.Fecha);
+            e.HasOne(x => x.Producto).WithMany(p => p.Movimientos).HasForeignKey(x => x.ProductoId)
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(x => x.Warehouse).WithMany(w => w.Movements).HasForeignKey(x => x.WarehouseId)
+            e.HasOne(x => x.Almacen).WithMany(w => w.Movimientos).HasForeignKey(x => x.AlmacenId)
                 .OnDelete(DeleteBehavior.Restrict);
-            e.HasOne(x => x.User).WithMany(u => u.Movements).HasForeignKey(x => x.UserId)
+            e.HasOne(x => x.Usuario).WithMany(u => u.Movimientos).HasForeignKey(x => x.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<AppNotification>(e =>
+        modelBuilder.Entity<Notificacion>(e =>
         {
-            e.ToTable("Notifications");
+            e.ToTable("Notificaciones");
             e.HasKey(x => x.Id);
-            e.Property(x => x.Message).HasMaxLength(400).IsRequired();
-            e.Property(x => x.Level).HasConversion<string>().HasMaxLength(20);
-            e.HasIndex(x => x.IsRead);
-            e.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId)
+            e.Property(x => x.Mensaje).HasMaxLength(400).IsRequired();
+            e.Property(x => x.Nivel).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(x => x.Leida);
+            e.HasOne(x => x.Producto).WithMany().HasForeignKey(x => x.ProductoId)
                 .OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId)
+            e.HasOne(x => x.Almacen).WithMany().HasForeignKey(x => x.AlmacenId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

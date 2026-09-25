@@ -14,23 +14,23 @@ public class WarehouseService : IWarehouseService
 
     public async Task<List<WarehouseDto>> GetAsync(string? search, bool includeInactive, CancellationToken ct = default)
     {
-        var query = _db.Warehouses.AsNoTracking().Include(w => w.StockLevels).AsQueryable();
+        var query = _db.Almacenes.AsNoTracking().Include(w => w.NivelesStock).AsQueryable();
 
-        if (!includeInactive) query = query.Where(w => w.IsActive);
+        if (!includeInactive) query = query.Where(w => w.Activo);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToLower();
-            query = query.Where(w => w.Name.ToLower().Contains(term) || w.Code.ToLower().Contains(term));
+            query = query.Where(w => w.Nombre.ToLower().Contains(term) || w.Codigo.ToLower().Contains(term));
         }
 
-        var items = await query.OrderBy(w => w.Code).ToListAsync(ct);
+        var items = await query.OrderBy(w => w.Codigo).ToListAsync(ct);
         return items.Select(Mapping.ToDto).ToList();
     }
 
     public async Task<WarehouseDto> GetAsync(int id, CancellationToken ct = default)
     {
-        var warehouse = await _db.Warehouses.AsNoTracking().Include(w => w.StockLevels)
+        var warehouse = await _db.Almacenes.AsNoTracking().Include(w => w.NivelesStock)
             .FirstOrDefaultAsync(w => w.Id == id, ct)
             ?? throw new NotFoundException("Almacén no encontrado.");
         return Mapping.ToDto(warehouse);
@@ -40,30 +40,30 @@ public class WarehouseService : IWarehouseService
     {
         await ValidateAsync(request, null, ct);
 
-        var warehouse = new Core.Entities.Warehouse
+        var warehouse = new Core.Entities.Almacen
         {
-            Name = request.Name.Trim(),
-            Code = request.Code.Trim().ToUpperInvariant(),
-            Location = request.Location?.Trim(),
-            IsActive = request.IsActive
+            Nombre = request.Name.Trim(),
+            Codigo = request.Code.Trim().ToUpperInvariant(),
+            Ubicacion = request.Location?.Trim(),
+            Activo = request.IsActive
         };
 
-        _db.Warehouses.Add(warehouse);
+        _db.Almacenes.Add(warehouse);
         await _db.SaveChangesAsync(ct);
         return await GetAsync(warehouse.Id, ct);
     }
 
     public async Task<WarehouseDto> UpdateAsync(int id, WarehouseRequest request, CancellationToken ct = default)
     {
-        var warehouse = await _db.Warehouses.FirstOrDefaultAsync(w => w.Id == id, ct)
+        var warehouse = await _db.Almacenes.FirstOrDefaultAsync(w => w.Id == id, ct)
             ?? throw new NotFoundException("Almacén no encontrado.");
 
         await ValidateAsync(request, id, ct);
 
-        warehouse.Name = request.Name.Trim();
-        warehouse.Code = request.Code.Trim().ToUpperInvariant();
-        warehouse.Location = request.Location?.Trim();
-        warehouse.IsActive = request.IsActive;
+        warehouse.Nombre = request.Name.Trim();
+        warehouse.Codigo = request.Code.Trim().ToUpperInvariant();
+        warehouse.Ubicacion = request.Location?.Trim();
+        warehouse.Activo = request.IsActive;
 
         await _db.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
@@ -71,17 +71,17 @@ public class WarehouseService : IWarehouseService
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
-        var warehouse = await _db.Warehouses.FirstOrDefaultAsync(w => w.Id == id, ct)
+        var warehouse = await _db.Almacenes.FirstOrDefaultAsync(w => w.Id == id, ct)
             ?? throw new NotFoundException("Almacén no encontrado.");
 
-        if (await _db.Movements.AnyAsync(m => m.WarehouseId == id, ct) ||
-            await _db.StockLevels.AnyAsync(s => s.WarehouseId == id && s.Quantity > 0, ct))
+        if (await _db.Movimientos.AnyAsync(m => m.AlmacenId == id, ct) ||
+            await _db.NivelesStock.AnyAsync(s => s.AlmacenId == id && s.Cantidad > 0, ct))
         {
-            warehouse.IsActive = false;
+            warehouse.Activo = false;
         }
         else
         {
-            _db.Warehouses.Remove(warehouse);
+            _db.Almacenes.Remove(warehouse);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -95,7 +95,7 @@ public class WarehouseService : IWarehouseService
             throw new AppException("El código del almacén es obligatorio.");
 
         var code = request.Code.Trim().ToUpperInvariant();
-        if (await _db.Warehouses.AnyAsync(w => w.Code == code && w.Id != currentId, ct))
+        if (await _db.Almacenes.AnyAsync(w => w.Codigo == code && w.Id != currentId, ct))
             throw new AppException($"Ya existe un almacén con el código \"{code}\".");
     }
 }

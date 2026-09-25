@@ -14,9 +14,9 @@ public class DashboardService : IDashboardService
 
     public async Task<DashboardDto> GetAsync(CancellationToken ct = default)
     {
-        var products = _db.Products.AsNoTracking().Where(p => p.IsActive);
-        var stockLevels = _db.StockLevels.AsNoTracking();
-        var movements = _db.Movements.AsNoTracking();
+        var products = _db.Productos.AsNoTracking().Where(p => p.Activo);
+        var stockLevels = _db.NivelesStock.AsNoTracking();
+        var movements = _db.Movimientos.AsNoTracking();
 
         var now = DateTime.UtcNow;
         var today = now.Date;
@@ -24,31 +24,31 @@ public class DashboardService : IDashboardService
         var flowStart = today.AddDays(-29);
 
         var totalProducts = await products.CountAsync(ct);
-        var totalUnits = await stockLevels.SumAsync(s => (long?)s.Quantity, ct) ?? 0;
-        var activeWarehouses = await _db.Warehouses.CountAsync(w => w.IsActive, ct);
+        var totalUnits = await stockLevels.SumAsync(s => (long?)s.Cantidad, ct) ?? 0;
+        var activeWarehouses = await _db.Almacenes.CountAsync(w => w.Activo, ct);
 
         var lowStock = await products
-            .Where(p => p.StockLevels.Sum(s => s.Quantity) <= p.MinStock)
+            .Where(p => p.NivelesStock.Sum(s => s.Cantidad) <= p.StockMinimo)
             .CountAsync(ct);
 
-        var movementsToday = await movements.CountAsync(m => m.Date >= today, ct);
+        var movementsToday = await movements.CountAsync(m => m.Fecha >= today, ct);
 
         var monthlyIn = await movements
-            .Where(m => m.Type == MovementType.Entrada && m.Date >= monthStart)
-            .SumAsync(m => (decimal?)(m.Quantity * m.UnitPrice), ct) ?? 0m;
+            .Where(m => m.Tipo == MovementType.Entrada && m.Fecha >= monthStart)
+            .SumAsync(m => (decimal?)(m.Cantidad * m.PrecioUnitario), ct) ?? 0m;
 
         var monthlyOut = await movements
-            .Where(m => m.Type == MovementType.Salida && m.Date >= monthStart)
-            .SumAsync(m => (decimal?)(m.Quantity * m.UnitPrice), ct) ?? 0m;
+            .Where(m => m.Tipo == MovementType.Salida && m.Fecha >= monthStart)
+            .SumAsync(m => (decimal?)(m.Cantidad * m.PrecioUnitario), ct) ?? 0m;
 
         var flowData = await movements
-            .Where(m => m.Date >= flowStart)
-            .GroupBy(m => new { m.Date.Year, m.Date.Month, m.Date.Day })
+            .Where(m => m.Fecha >= flowStart)
+            .GroupBy(m => new { m.Fecha.Year, m.Fecha.Month, m.Fecha.Day })
             .Select(g => new
             {
                 Key = g.Key,
-                Entries = g.Where(x => x.Type == MovementType.Entrada).Sum(x => x.Quantity),
-                Exits = g.Where(x => x.Type == MovementType.Salida).Sum(x => x.Quantity)
+                Entries = g.Where(x => x.Tipo == MovementType.Entrada).Sum(x => x.Cantidad),
+                Exits = g.Where(x => x.Tipo == MovementType.Salida).Sum(x => x.Cantidad)
             })
             .ToListAsync(ct);
 
@@ -68,14 +68,14 @@ public class DashboardService : IDashboardService
         }
 
         var categoryProducts = await products
-            .GroupBy(p => p.Category.Name)
+            .GroupBy(p => p.Categoria.Nombre)
             .Select(g => new { Name = g.Key, Count = g.Count() })
             .ToListAsync(ct);
 
-        var categoryUnits = await _db.StockLevels.AsNoTracking()
-            .Where(s => s.Product.IsActive)
-            .GroupBy(s => s.Product.Category.Name)
-            .Select(g => new { Name = g.Key, Units = g.Sum(s => s.Quantity) })
+        var categoryUnits = await _db.NivelesStock.AsNoTracking()
+            .Where(s => s.Producto.Activo)
+            .GroupBy(s => s.Producto.Categoria.Nombre)
+            .Select(g => new { Name = g.Key, Units = g.Sum(s => s.Cantidad) })
             .ToListAsync(ct);
 
         var categoryShare = categoryProducts
@@ -90,18 +90,18 @@ public class DashboardService : IDashboardService
             .ToList();
 
         var critical = await products
-            .SelectMany(p => p.StockLevels.Select(s => new
+            .SelectMany(p => p.NivelesStock.Select(s => new
             {
                 p.Id,
-                p.Code,
-                p.Name,
-                p.Unit,
-                p.MinStock,
-                s.Quantity,
-                Warehouse = s.Warehouse.Name
+                p.Codigo,
+                p.Nombre,
+                p.Unidad,
+                p.StockMinimo,
+                s.Cantidad,
+                Warehouse = s.Almacen.Nombre
             }))
-            .Where(x => x.Quantity <= x.MinStock)
-            .OrderBy(x => x.Quantity - x.MinStock)
+            .Where(x => x.Cantidad <= x.StockMinimo)
+            .OrderBy(x => x.Cantidad - x.StockMinimo)
             .Take(8)
             .ToListAsync(ct);
 
@@ -109,20 +109,20 @@ public class DashboardService : IDashboardService
             .Select(x => new LowStockDto
             {
                 ProductId = x.Id,
-                Code = x.Code,
-                Name = x.Name,
+                Code = x.Codigo,
+                Name = x.Nombre,
                 WarehouseName = x.Warehouse,
-                Quantity = x.Quantity,
-                MinStock = x.MinStock,
-                Status = Mapping.ProductStatus(x.Quantity, x.MinStock)
+                Quantity = x.Cantidad,
+                MinStock = x.StockMinimo,
+                Status = Mapping.ProductStatus(x.Cantidad, x.StockMinimo)
             })
             .ToList();
 
         var recentMovements = await movements
-            .Include(m => m.Product)
-            .Include(m => m.Warehouse)
-            .Include(m => m.User)
-            .OrderByDescending(m => m.Date)
+            .Include(m => m.Producto)
+            .Include(m => m.Almacen)
+            .Include(m => m.Usuario)
+            .OrderByDescending(m => m.Fecha)
             .Take(8)
             .Select(m => Mapping.ToDto(m))
             .ToListAsync(ct);
