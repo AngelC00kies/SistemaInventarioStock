@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using InventorySystem.API.Filters;
 using InventorySystem.API.Middleware;
 using InventorySystem.API.Services;
 using InventorySystem.Application;
@@ -21,8 +22,14 @@ QuestPDF.Settings.License = LicenseType.Community;
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// ── Controladores + JSON (camelCase y enums como texto) ──
-builder.Services.AddControllers().AddJsonOptions(o =>
+// ── Controladores, validación de DTOs y JSON (camelCase, enums como texto) ──
+builder.Services.AddScoped<ValidationActionFilter>();
+builder.Services.AddControllers(options =>
+{
+    // Ejecuta los validadores FluentValidation registrados en Application y
+    // devuelve 400 con el detalle por campo si la petición no es válida.
+    options.Filters.Add<ValidationActionFilter>();
+}).AddJsonOptions(o =>
 {
     o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
