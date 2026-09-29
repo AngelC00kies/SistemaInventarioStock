@@ -2,6 +2,7 @@ using InventorySystem.Application.Common;
 using InventorySystem.Domain.Common;
 using InventorySystem.Domain.Entities;
 using InventorySystem.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        MapIdentityToSpanish(builder);
 
         // Índices únicos
         builder.Entity<Category>().HasIndex(c => c.Name).IsUnique();
@@ -107,6 +110,84 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
                 .HasForeignKey(n => n.WarehouseId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(n => new { n.ProductId, n.WarehouseId, n.IsResolved });
+        });
+    }
+
+    /// <summary>
+    /// Traduce al español las tablas y columnas de ASP.NET Core Identity
+    /// (por defecto se crean como AspNetUsers, AspNetRoles, …).
+    /// </summary>
+    private static void MapIdentityToSpanish(ModelBuilder builder)
+    {
+        builder.Entity<ApplicationUser>(e =>
+        {
+            e.ToTable("Usuarios");
+            e.Property(u => u.UserName).HasColumnName("NombreUsuario");
+            e.Property(u => u.NormalizedUserName).HasColumnName("NombreUsuarioNormalizado");
+            e.Property(u => u.FullName).HasColumnName("NombreCompleto");
+            e.Property(u => u.NormalizedEmail).HasColumnName("EmailNormalizado");
+            e.Property(u => u.EmailConfirmed).HasColumnName("EmailConfirmado");
+            e.Property(u => u.IsActive).HasColumnName("Activo");
+            e.Property(u => u.RefreshToken).HasColumnName("TokenRefresco");
+            e.Property(u => u.RefreshTokenExpiry).HasColumnName("TokenRefrescoVencimiento");
+            e.Property(u => u.PasswordHash).HasColumnName("HashContrasena");
+            e.Property(u => u.SecurityStamp).HasColumnName("MarcaSeguridad");
+            e.Property(u => u.ConcurrencyStamp).HasColumnName("MarcaConcurrencia");
+            e.Property(u => u.PhoneNumber).HasColumnName("Telefono");
+            e.Property(u => u.PhoneNumberConfirmed).HasColumnName("TelefonoConfirmado");
+            e.Property(u => u.TwoFactorEnabled).HasColumnName("DosFactoresHabilitado");
+            e.Property(u => u.LockoutEnd).HasColumnName("BloqueoHasta");
+            e.Property(u => u.LockoutEnabled).HasColumnName("BloqueoHabilitado");
+            e.Property(u => u.AccessFailedCount).HasColumnName("IntentosFallidos");
+        });
+
+        builder.Entity<IdentityRole>(e =>
+        {
+            e.ToTable("Roles");
+            e.Property(r => r.Name).HasColumnName("Nombre");
+            e.Property(r => r.NormalizedName).HasColumnName("NombreNormalizado");
+            e.Property(r => r.ConcurrencyStamp).HasColumnName("MarcaConcurrencia");
+        });
+
+        builder.Entity<IdentityUserRole<string>>(e =>
+        {
+            e.ToTable("UsuariosRoles");
+            e.Property(r => r.UserId).HasColumnName("UsuarioId");
+            e.Property(r => r.RoleId).HasColumnName("RolId");
+        });
+
+        builder.Entity<IdentityUserClaim<string>>(e =>
+        {
+            e.ToTable("UsuariosClaims");
+            e.Property(c => c.UserId).HasColumnName("UsuarioId");
+            e.Property(c => c.ClaimType).HasColumnName("TipoReclamacion");
+            e.Property(c => c.ClaimValue).HasColumnName("ValorReclamacion");
+        });
+
+        builder.Entity<IdentityRoleClaim<string>>(e =>
+        {
+            e.ToTable("RolesClaims");
+            e.Property(c => c.RoleId).HasColumnName("RolId");
+            e.Property(c => c.ClaimType).HasColumnName("TipoReclamacion");
+            e.Property(c => c.ClaimValue).HasColumnName("ValorReclamacion");
+        });
+
+        builder.Entity<IdentityUserLogin<string>>(e =>
+        {
+            e.ToTable("UsuariosLogins");
+            e.Property(l => l.UserId).HasColumnName("UsuarioId");
+            e.Property(l => l.LoginProvider).HasColumnName("ProveedorLogin");
+            e.Property(l => l.ProviderKey).HasColumnName("ClaveProveedor");
+            e.Property(l => l.ProviderDisplayName).HasColumnName("NombreProveedor");
+        });
+
+        builder.Entity<IdentityUserToken<string>>(e =>
+        {
+            e.ToTable("UsuariosTokens");
+            e.Property(t => t.UserId).HasColumnName("UsuarioId");
+            e.Property(t => t.LoginProvider).HasColumnName("ProveedorLogin");
+            e.Property(t => t.Name).HasColumnName("Nombre");
+            e.Property(t => t.Value).HasColumnName("Valor");
         });
     }
 }
