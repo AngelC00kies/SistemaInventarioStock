@@ -1,29 +1,31 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { roleAllows } from '../config/roles'
+import { screens } from '../config/navigation'
+
+/**
+ * Las rutas se derivan del registro único de pantallas (config/navigation.js).
+ * No se declaran rutas sueltas: para añadir una pantalla se edita navigation.js.
+ */
+const toRoute = (screen) => ({
+  path: screen.layout === 'bare' ? screen.path : screen.path.replace(/^\//, ''),
+  name: screen.name,
+  component: screen.component,
+  meta: {
+    public: !!screen.public,
+    roles: screen.roles,
+    title: screen.title,
+    fallback: screen.fallback || '/dashboard',
+  },
+})
 
 const routes = [
-  { path: '/login', name: 'login', component: () => import('../pages/Login.vue'), meta: { public: true } },
+  ...screens.filter((s) => s.layout === 'bare').map(toRoute),
   {
     path: '/',
     component: () => import('../layouts/MainLayout.vue'),
-    children: [
-      { path: '', redirect: '/dashboard' },
-      { path: 'dashboard', component: () => import('../pages/Dashboard.vue') },
-      { path: 'products', component: () => import('../pages/Products.vue') },
-      { path: 'products/new', component: () => import('../pages/ProductForm.vue'), meta: { edit: true } },
-      { path: 'products/:id', component: () => import('../pages/ProductForm.vue'), meta: { edit: true } },
-      { path: 'movements', component: () => import('../pages/Movements.vue') },
-      { path: 'movements/new', component: () => import('../pages/MovementForm.vue'), meta: { edit: true } },
-      { path: 'notifications', component: () => import('../pages/Notifications.vue') },
-      { path: 'categories', component: () => import('../pages/Categories.vue') },
-      { path: 'suppliers', component: () => import('../pages/Suppliers.vue') },
-      { path: 'warehouses', component: () => import('../pages/Warehouses.vue') },
-      { path: 'reports/stock', component: () => import('../pages/ReportStock.vue') },
-      { path: 'reports/movements', component: () => import('../pages/ReportMovements.vue') },
-      { path: 'users', component: () => import('../pages/Users.vue'), meta: { admin: true } },
-    ],
+    children: screens.filter((s) => s.layout !== 'bare').map(toRoute),
   },
-  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
 const router = createRouter({
@@ -34,17 +36,15 @@ const router = createRouter({
 router.beforeEach((to) => {
   const auth = useAuthStore()
 
-  // Sesión
   if (to.meta.public) {
-    if (auth.isAuthenticated) return '/dashboard'
+    if (auth.isAuthenticated && to.name === 'login') return '/dashboard'
     return true
   }
+
   if (!auth.isAuthenticated) return '/login'
 
-  // Permisos por rol
-  if (to.meta.admin && !auth.isAdmin) return '/dashboard'
-  if (to.meta.edit && !auth.canEdit)
-    return to.path.startsWith('/products') ? '/products' : '/movements'
+  // Permiso declarado en navigation.js (mismo criterio que el menú lateral)
+  if (!roleAllows(auth.role, to.meta.roles)) return to.meta.fallback
 
   return true
 })

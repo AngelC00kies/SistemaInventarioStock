@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import api from '../api/client'
+import { ROLES, WRITERS, roleAllows } from '../config/roles'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -11,13 +12,18 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: (state) => !!state.token,
     role: (state) => state.user?.role || null,
 
-    // ── Permisos por rol ──
-    canEdit: (state) => ['Admin', 'Usuario'].includes(state.user?.role),
-    isAdmin: (state) => state.user?.role === 'Admin',
-    isAuditor: (state) => state.user?.role === 'Auditor',
+    // ── Permisos por rol (derivados de config/roles.js) ──
+    canEdit: (state) => roleAllows(state.user?.role, WRITERS),
+    isAdmin: (state) => state.user?.role === ROLES.ADMIN,
+    isAuditor: (state) => state.user?.role === ROLES.AUDITOR,
   },
 
   actions: {
+    /** ¿Tiene el usuario alguno de los roles indicados? (sin roles = todos) */
+    hasRole(roles) {
+      return roleAllows(this.role, roles)
+    },
+
     async login(userName, password) {
       const { data } = await api.post('/auth/login', { userName, password })
       this.setSession(data)
