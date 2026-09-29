@@ -42,31 +42,31 @@
           />
         </div>
 
-        <select v-if="hasFilter('warehouse')" v-model="filters.warehouseId" class="input w-auto py-1.5 text-sm" @change="loadPreview(1)">
+        <select v-if="hasFilter('warehouse')" v-model="filters.warehouseId" class="input w-auto py-1.5 text-sm">
           <option :value="null">Todos los almacenes</option>
           <option v-for="w in options.warehouses" :key="w.id" :value="w.id">{{ w.name }}</option>
         </select>
 
-        <select v-if="hasFilter('category')" v-model="filters.categoryId" class="input w-auto py-1.5 text-sm" @change="loadPreview(1)">
+        <select v-if="hasFilter('category')" v-model="filters.categoryId" class="input w-auto py-1.5 text-sm">
           <option :value="null">Todas las categorías</option>
           <option v-for="c in options.categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
 
-        <select v-if="hasFilter('supplier')" v-model="filters.supplierId" class="input w-auto py-1.5 text-sm" @change="loadPreview(1)">
+        <select v-if="hasFilter('supplier')" v-model="filters.supplierId" class="input w-auto py-1.5 text-sm">
           <option :value="null">Todos los proveedores</option>
           <option v-for="s in options.suppliers" :key="s.id" :value="s.id">{{ s.name }}</option>
         </select>
 
-        <select v-if="hasFilter('type')" v-model="filters.type" class="input w-auto py-1.5 text-sm" @change="loadPreview(1)">
+        <select v-if="hasFilter('type')" v-model="filters.type" class="input w-auto py-1.5 text-sm">
           <option :value="null">Entradas y salidas</option>
           <option value="Entrada">Solo entradas</option>
           <option value="Salida">Solo salidas</option>
         </select>
 
         <div v-if="hasFilter('from')" class="flex items-center gap-1.5 text-sm text-ink-500">
-          <input v-model="filters.from" type="date" class="input w-auto py-1.5 text-[13px]" @change="loadPreview(1)" />
+          <input v-model="filters.from" type="date" class="input w-auto py-1.5 text-[13px]" />
           <span>—</span>
-          <input v-model="filters.to" type="date" class="input w-auto py-1.5 text-[13px]" @change="loadPreview(1)" />
+          <input v-model="filters.to" type="date" class="input w-auto py-1.5 text-[13px]" />
         </div>
       </div>
 
@@ -79,7 +79,7 @@
       </div>
 
       <div v-else-if="!preview.rows.length" class="px-4">
-        <EmptyState title="Sin datos para este reporte" description="Ajuste los filtros para obtener resultados." />
+        <EmptyState :title="emptyState.title" :description="emptyState.description" />
       </div>
 
       <template v-else>
@@ -131,7 +131,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   ArrowLeftRight,
   Boxes,
@@ -182,6 +182,39 @@ const visibleReports = computed(() =>
 
 const currentDef = computed(() => reportDefs[selected.value])
 
+const emptyMessages = {
+  stock: {
+    title: 'Sin productos para mostrar',
+    description: 'No hay productos que coincidan con los filtros seleccionados.',
+  },
+  'critical-stock': {
+    title: 'No hay productos con stock bajo',
+    description: 'Todos los productos están por encima de su stock mínimo. Aparecerán aquí cuando la existencia baje del mínimo configurado.',
+  },
+  movements: {
+    title: 'Sin movimientos registrados',
+    description: 'No hay entradas ni salidas que coincidan con el rango de fechas y filtros seleccionados.',
+  },
+  products: {
+    title: 'Sin productos para mostrar',
+    description: 'No hay productos que coincidan con la categoría, proveedor o búsqueda indicada.',
+  },
+  categories: {
+    title: 'Aún no hay categorías',
+    description: 'Registre categorías desde el módulo de Catálogos para verlas aquí.',
+  },
+  suppliers: {
+    title: 'Aún no hay proveedores',
+    description: 'Registre proveedores desde el módulo de Catálogos para verlos aquí.',
+  },
+  users: {
+    title: 'Aún no hay usuarios',
+    description: 'No hay cuentas de acceso registradas en el sistema.',
+  },
+}
+
+const emptyState = computed(() => emptyMessages[selected.value] || emptyMessages.stock)
+
 const exportParams = computed(() => ({
   warehouseId: filters.warehouseId,
   categoryId: filters.categoryId,
@@ -200,9 +233,29 @@ function alignClass(col) {
   return right.includes(col) ? 'text-right' : ''
 }
 
+let skipNextWatch = false
+
 function selectReport(key) {
+  if (selected.value === key) return
   selected.value = key
-  loadPreview(1)
+  // Si cambian filtros vigilados, el watch se dispararía además de esta carga:
+  // lo marcamos para que no haya dos peticiones simultáneas.
+  skipNextWatch = resetFilters()
+  loadPreview()
+}
+
+function resetFilters() {
+  const watchedChanged = Boolean(
+    filters.warehouseId || filters.categoryId || filters.supplierId || filters.type || filters.from || filters.to
+  )
+  filters.search = ''
+  filters.warehouseId = null
+  filters.categoryId = null
+  filters.supplierId = null
+  filters.type = null
+  filters.from = ''
+  filters.to = ''
+  return watchedChanged
 }
 
 let timer = null
@@ -211,20 +264,26 @@ function debouncedPreview() {
   timer = setTimeout(() => loadPreview(1), 350)
 }
 
+let requestSeq = 0
+
 async function loadPreview() {
+  const seq = ++requestSeq
   preview.loading = true
   error.value = ''
   try {
     const result = await currentDef.value.load(filters)
+    if (seq !== requestSeq) return
     preview.columns = result.columns
     preview.rows = result.rows
     preview.summary = result.summary
   } catch (e) {
+    if (seq !== requestSeq) return
     error.value = e.message || 'No se pudo cargar la vista previa.'
     preview.columns = []
     preview.rows = []
+    preview.summary = ''
   } finally {
-    preview.loading = false
+    if (seq === requestSeq) preview.loading = false
   }
 }
 
@@ -241,9 +300,24 @@ async function exportNow(format) {
 }
 
 watch(
-  () => [filters.warehouseId, filters.categoryId, filters.supplierId, filters.type],
-  () => loadPreview()
+  () => [
+    filters.warehouseId,
+    filters.categoryId,
+    filters.supplierId,
+    filters.type,
+    filters.from,
+    filters.to,
+  ],
+  () => {
+    if (skipNextWatch) {
+      skipNextWatch = false
+      return
+    }
+    loadPreview()
+  }
 )
+
+onBeforeUnmount(() => clearTimeout(timer))
 
 onMounted(async () => {
   const loaded = await loadCatalogOptions()
