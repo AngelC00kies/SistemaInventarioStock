@@ -17,6 +17,6 @@ import { PackageSearch } from '@lucide/vue'
 defineProps({
   title: { type: String, default: 'Sin resultados' },
   description: { type: String, default: 'No se encontraron registros que coincidan con los filtros aplicados.' },
-  icon: { type: Object, default: PackageSearch },
+  icon: { type: Function, default: PackageSearch },
 })
 </script>
