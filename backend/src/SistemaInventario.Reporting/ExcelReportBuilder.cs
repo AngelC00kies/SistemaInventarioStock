@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 
 namespace SistemaInventario.Reporting;
 
+/// <summary>Compone el XLSX del reporte con ClosedXML: bloque de título, tabla con autofiltro y resumen.</summary>
 public static class ExcelReportBuilder
 {
     private static readonly XLColor Primary = XLColor.FromHtml("#1E3A5F");
@@ -28,6 +29,8 @@ public static class ExcelReportBuilder
         sheet.Cell(3, 1).Style.Font.SetFontSize(9).Font.SetFontColor(XLColor.FromHtml("#64748B"));
         sheet.Range(3, 1, 3, Math.Max(1, table.Columns.Count)).Merge();
 
+        // Las filas 1 a 3 llevan el bloque de título (fusionado al ancho de la tabla); la 4 queda libre
+        // y la cabecera de datos se escribe en la 5, punto desde el que se congelan y filtran las filas
         var headerRow = 5;
 
         // Cabecera
@@ -58,6 +61,8 @@ public static class ExcelReportBuilder
 
                 if (r % 2 == 1) cell.Style.Fill.SetBackgroundColor(Band);
 
+                // Detección heurística de cifras: se quitan separadores y se prueba la conversión;
+                // si resulta numérica, la celda se alinea a la derecha como en una hoja de cálculo
                 var isNumeric = decimal.TryParse(table.Rows[r][c].Replace(",", "").Replace(".", ""),
                     out _);
                 if (isNumeric) cell.Style.Alignment.SetHorizontal(XLAlignmentHorizontalValues.Right);
@@ -91,6 +96,7 @@ public static class ExcelReportBuilder
             column.Style.Alignment.SetWrapText(false);
         }
 
+        // Congela la cabecera, ajusta a una página de ancho y activa el autofiltro sobre los datos
         sheet.SheetView.FreezeRows(headerRow);
         sheet.PageSetup.PageOrientation = XLPageOrientation.Landscape;
         sheet.PageSetup.FitToPages(1, 0);

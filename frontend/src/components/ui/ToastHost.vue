@@ -36,6 +36,8 @@ import { useToastStore } from '@/stores/toast'
 
 const store = useToastStore()
 
+// Tipo de toast -> icono y color (borde e icono comparten la misma cadena de respaldo `info`
+// cuando el tipo es desconocido)
 const icons = { success: CheckCircle2, error: XCircle, warning: AlertTriangle, info: Info }
 const icon = (type) => icons[type] || Info
 

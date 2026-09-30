@@ -6,6 +6,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>CRUD de proveedores con unicidad de nombre y borrado protegido frente a productos asociados.</summary>
 public class SupplierService : ISupplierService
 {
     private readonly AppDbContext _db;
@@ -79,6 +80,7 @@ public class SupplierService : ISupplierService
         var supplier = await _db.Proveedores.FirstOrDefaultAsync(s => s.Id == id, ct)
             ?? throw new NotFoundException("Proveedor no encontrado.");
 
+        // Con productos asociados sólo se desactiva, para no perder el vínculo con lo que ya se compró a ese proveedor.
         if (await _db.Productos.AnyAsync(p => p.ProveedorId == id, ct))
         {
             supplier.Activo = false;
@@ -96,6 +98,7 @@ public class SupplierService : ISupplierService
         if (string.IsNullOrWhiteSpace(request.Name))
             throw new AppException("El nombre del proveedor es obligatorio.");
 
+        // Unicidad del nombre sin distinguir mayúsculas: ambas partes se comparan en minúsculas.
         var name = request.Name.Trim().ToLower();
         if (await _db.Proveedores.AnyAsync(s => s.Nombre.ToLower() == name && s.Id != currentId, ct))
             throw new AppException($"Ya existe un proveedor llamado \"{request.Name.Trim()}\".");

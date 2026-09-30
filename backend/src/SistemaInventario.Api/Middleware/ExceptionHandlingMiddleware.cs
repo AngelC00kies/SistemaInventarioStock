@@ -3,6 +3,7 @@ using SistemaInventario.Core.Exceptions;
 
 namespace SistemaInventario.Api.Middleware;
 
+/// <summary>Convierte las excepciones de la petición en una respuesta JSON { message } con su código HTTP.</summary>
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
@@ -20,6 +21,7 @@ public class ExceptionHandlingMiddleware
         {
             await _next(context);
         }
+        // AppException y NotFoundException ya traen su código HTTP; lo no previsto se oculta tras un 500 genérico
         catch (AppException ex)
         {
             await WriteAsync(context, ex.StatusCode, ex.Message);
@@ -42,6 +44,7 @@ public class ExceptionHandlingMiddleware
 
     private static async Task WriteAsync(HttpContext context, int status, string message)
     {
+        // Si la respuesta ya empezó a enviarse no puede reescribirse ni el estado ni el cuerpo
         if (context.Response.HasStarted) return;
 
         context.Response.Clear();

@@ -5,6 +5,7 @@ using SistemaInventario.Core.Interfaces;
 
 namespace SistemaInventario.Api.Controllers;
 
+/// <summary>Catálogo de categorías: búsqueda con opcional de incluir inactivas y su mantenimiento.</summary>
 [ApiController]
 [Route("api/categories")]
 [Authorize]
@@ -14,6 +15,7 @@ public class CategoriesController : ControllerBase
 
     public CategoriesController(ICategoryService categories) => _categories = categories;
 
+    // includeInactive permite ver también las categorías dadas de baja (consultas históricas y reportes)
     [HttpGet]
     public async Task<ActionResult<List<CategoryDto>>> GetAll(
         [FromQuery] string? search, [FromQuery] bool includeInactive = false, CancellationToken ct = default)
@@ -45,6 +47,7 @@ public class CategoriesController : ControllerBase
     }
 }
 
+/// <summary>Catálogo de proveedores: búsqueda, alta, edición y baja lógica.</summary>
 [ApiController]
 [Route("api/suppliers")]
 [Authorize]
@@ -85,6 +88,7 @@ public class SuppliersController : ControllerBase
     }
 }
 
+/// <summary>Almacenes donde se ubica el stock: búsqueda, alta, edición y baja lógica.</summary>
 [ApiController]
 [Route("api/warehouses")]
 [Authorize]

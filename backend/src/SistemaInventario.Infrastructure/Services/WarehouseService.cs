@@ -6,6 +6,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>CRUD de almacenes con código único y borrado protegido cuando conserva movimientos o existencias.</summary>
 public class WarehouseService : IWarehouseService
 {
     private readonly AppDbContext _db;
@@ -74,6 +75,7 @@ public class WarehouseService : IWarehouseService
         var warehouse = await _db.Almacenes.FirstOrDefaultAsync(w => w.Id == id, ct)
             ?? throw new NotFoundException("Almacén no encontrado.");
 
+        // Con movimientos o existencias sólo se desactiva: los movimientos referencian el almacén y su histórico se conserva.
         if (await _db.Movimientos.AnyAsync(m => m.AlmacenId == id, ct) ||
             await _db.NivelesStock.AnyAsync(s => s.AlmacenId == id && s.Cantidad > 0, ct))
         {
@@ -94,6 +96,7 @@ public class WarehouseService : IWarehouseService
         if (string.IsNullOrWhiteSpace(request.Code))
             throw new AppException("El código del almacén es obligatorio.");
 
+        // El código se normaliza a mayúsculas antes de validar y guardar, así la unicidad no depende del formato escrito.
         var code = request.Code.Trim().ToUpperInvariant();
         if (await _db.Almacenes.AnyAsync(w => w.Codigo == code && w.Id != currentId, ct))
             throw new AppException($"Ya existe un almacén con el código \"{code}\".");

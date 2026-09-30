@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+// Store de avisos flotantes (toasts): cola compartida por toda la app y renderizada por <ToastHost/>.
+// Solo vive en memoria, no se persiste: al recargar la página la cola desaparece.
 let counter = 0
 
 export const useToastStore = defineStore('toast', {
@@ -8,6 +10,7 @@ export const useToastStore = defineStore('toast', {
   }),
 
   actions: {
+    // El id único permite auto-retirar cada aviso: los errores se quedan 7 s (más tiempo para leerlos) y el resto 4 s.
     push(type, message, title = null) {
       const id = ++counter
       this.items.push({ id, type, message, title })

@@ -31,6 +31,7 @@ import { TrendingDown, TrendingUp } from '@lucide/vue'
 const props = defineProps({
   label: { type: String, required: true },
   value: { type: [Number, String], default: 0 },
+  // Los iconos de lucide son componentes funcionales: Function, no Object (véase EmptyState)
   icon: { type: Function, required: true },
   hint: { type: String, default: '' },
   format: { type: String, default: 'number' },
@@ -54,6 +55,8 @@ const trendClasses = computed(() =>
 )
 const trendIcon = computed(() => (props.trendDirection === 'down' ? TrendingDown : TrendingUp))
 
+// `money` formatea en pesos chilenos sin decimales y `number` solo agrupa con locale es-CL;
+// cualquier otro valor de `format` se muestra tal cual, sin procesar
 const display = computed(() => {
   if (props.format === 'money') {
     return new Intl.NumberFormat('es-CL', {

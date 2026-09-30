@@ -7,6 +7,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>Alta, baja, edición y listado paginado de productos con validación de datos y unicidad de código.</summary>
 public class ProductService : IProductService
 {
     private readonly AppDbContext _db;
@@ -23,6 +24,7 @@ public class ProductService : IProductService
     public async Task<PagedResult<ProductDto>> GetAsync(ProductFilter filter, CancellationToken ct = default)
     {
         var page = Math.Max(1, filter.Page);
+        // Tamaño de página acotado a 1–200 para que un filtro mal formado no dispare consultas desmedidas.
         var pageSize = Math.Clamp(filter.PageSize, 1, 200);
 
         var query = Query();
@@ -48,6 +50,7 @@ public class ProductService : IProductService
         if (filter.WarehouseId.HasValue)
             query = query.Where(p => p.NivelesStock.Any(s => s.AlmacenId == filter.WarehouseId.Value));
 
+        // "Stock bajo" se evalúa sobre la suma de todos los almacenes frente al stock mínimo del producto.
         if (filter.OnlyLowStock.GetValueOrDefault())
             query = query.Where(p => p.NivelesStock.Sum(s => s.Cantidad) <= p.StockMinimo);
 
@@ -127,6 +130,7 @@ public class ProductService : IProductService
         var product = await _db.Productos.FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new NotFoundException("Producto no encontrado.");
 
+        // Borrado lógico si ya tiene movimientos: el histórico referencia al producto y no puede quedar huérfano.
         if (await _db.Movimientos.AnyAsync(m => m.ProductoId == id, ct))
         {
             product.Activo = false;
@@ -152,6 +156,7 @@ public class ProductService : IProductService
         if (request.MinStock < 0)
             throw new AppException("El stock mínimo no puede ser negativo.");
 
+        // El código se normaliza a mayúsculas antes de comparar: la unicidad no depende de mayúsculas/minúsculas.
         var code = request.Code.Trim().ToUpperInvariant();
         if (await _db.Productos.AnyAsync(p => p.Codigo == code && p.Id != currentId, ct))
             throw new AppException($"Ya existe un producto con el código \"{code}\".");

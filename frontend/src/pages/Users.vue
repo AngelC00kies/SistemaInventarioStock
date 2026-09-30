@@ -166,6 +166,10 @@
 </template>
 
 <script setup>
+// Gestión de usuarios: listado paginado con búsqueda y alta/edición/baja de cuentas.
+// La ruta es adminOnly, así que solo Admin llega aquí; el rol elegido en el formulario
+// (Admin, Usuario, Auditor) es el que el backend usará para autorizar cada petición.
+// Estados de la vista: cargando, guardando, modal de formulario y diálogo de borrado.
 import { onMounted, reactive, ref } from 'vue'
 import { LoaderCircle, Pencil, Search, ShieldCheck, Trash2, UserPlus } from '@lucide/vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
@@ -197,6 +201,7 @@ const search = ref('')
 const empty = () => ({ id: null, username: '', password: '', fullName: '', email: '', roleId: null, isActive: true })
 const form = reactive(empty())
 
+// 350 ms de espera tras la última tecla para no disparar una petición por cada carácter.
 let timer = null
 function debouncedLoad() {
   clearTimeout(timer)
@@ -218,6 +223,7 @@ async function load(p = page.value) {
 }
 
 function openCreate() {
+  // Preselecciona roles[1] ("Usuario") para que un alta rápida no quede con rol Admin.
   Object.assign(form, empty(), { roleId: roles.value[1]?.id ?? null })
   modal.value = true
 }
@@ -244,6 +250,7 @@ async function save() {
   try {
     if (form.id) {
       await updateUser(form.id, {
+        // Contraseña vacía en edición → null, señal para el backend de que se mantiene la actual.
         password: form.password || null,
         fullName: form.fullName,
         email: form.email || null,
@@ -265,6 +272,7 @@ async function save() {
 }
 
 function askDelete(u) {
+  // El botón ya viene deshabilitado para la cuenta activa; aquí se avisa en lugar de fallar después.
   if (u.id === auth.user?.id) {
     toast.info('No puede eliminar la cuenta desde la que está sesión.')
     return

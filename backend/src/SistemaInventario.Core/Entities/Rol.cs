@@ -1,5 +1,6 @@
 namespace SistemaInventario.Core.Entities;
 
+/// <summary>Perfil de permisos que decide qué puede hacer cada usuario en la aplicación.</summary>
 public class Rol
 {
     public int Id { get; set; }

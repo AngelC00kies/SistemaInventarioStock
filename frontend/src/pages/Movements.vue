@@ -14,6 +14,8 @@
       </template>
     </PageHeader>
 
+    <!-- Resumen del mes en curso: ignora los filtros de la tabla y se recalcula
+         con cada recarga, así que no cambia al buscar o filtrar más abajo. -->
     <div class="mt-6 grid gap-4 sm:grid-cols-3">
       <div class="card flex items-center gap-3 p-4">
         <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
@@ -117,6 +119,7 @@
                 {{ m.type === 'Entrada' ? '+' : '−' }}{{ m.quantity }}
               </td>
               <td class="text-right tabular-nums text-ink-600">{{ money(m.total) }}</td>
+              <!-- Existencia tras aplicar esta fila: la entrada suma y la salida resta. -->
               <td class="text-right tabular-nums text-ink-700">{{ m.stockAfter }}</td>
               <td>
                 <p class="max-w-[220px] truncate text-[13px] text-ink-600" :title="m.reason">{{ m.reason }}</p>
@@ -128,6 +131,7 @@
         </table>
       </div>
 
+      <!-- El número de página llega como argumento de load() vía update:model-value. -->
       <Pagination
         v-if="!loading && items.length"
         v-model="filters.page"
@@ -263,6 +267,8 @@
 </template>
 
 <script setup>
+// Vista de movimientos: lista paginada de entradas y salidas con filtros combinados,
+// resumen del mes en curso y alta de movimientos que actualizan el stock del almacén.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   ArrowDownToLine,
@@ -300,6 +306,8 @@ const warehouses = ref([])
 const productSearch = ref('')
 const productOpen = ref(false)
 
+// Filtros combinados de la tabla: los selects y las fechas recargan desde la
+// página 1, mientras que la búsqueda se envía con debounce.
 const filters = reactive({
   search: '',
   type: null,
@@ -323,6 +331,8 @@ const form = reactive({
   date: '',
 })
 
+// Opciones del selector de producto: solo activos, coincidencia por nombre o
+// código y tope de 50 para mantener el desplegable ágil.
 const filteredProducts = computed(() => {
   const term = productSearch.value.trim().toLowerCase()
   const list = products.value.filter((p) => p.isActive !== false)
@@ -334,6 +344,8 @@ const filteredProducts = computed(() => {
 
 const selectedProduct = computed(() => products.value.find((p) => p.id === form.productId) || null)
 
+// Stock del producto elegido en el almacén seleccionado: orienta la cantidad
+// máxima que puede salir en una Salida.
 const availableHint = computed(() => {
   const p = selectedProduct.value
   if (!p || !form.warehouseId) return ''
@@ -341,6 +353,7 @@ const availableHint = computed(() => {
   return `Disponible en el almacén seleccionado: ${stock.quantity} ${p.unit.toLowerCase()}`
 })
 
+// Filtros vigentes que se replican en la exportación del listado.
 const exportParams = computed(() => ({
   search: filters.search,
   type: filters.type,
@@ -349,12 +362,16 @@ const exportParams = computed(() => ({
   to: filters.to || undefined,
 }))
 
+// Espera 350 ms tras la última tecla antes de recargar, para no saturar el backend.
 let timer = null
 function debouncedLoad() {
   clearTimeout(timer)
   timer = setTimeout(() => load(1), 350)
 }
 
+// Carga la página pedida y, en paralelo, los movimientos del mes en curso que
+// alimentan las tarjetas del resumen (limitados a 200: el resumen es aproximado
+// si el mes supera ese volumen) e independientes de los filtros de la tabla.
 async function load(page) {
   if (page) filters.page = page
   loading.value = true
@@ -387,6 +404,7 @@ async function load(page) {
   }
 }
 
+// Primer día del mes en curso en formato YYYY-MM-DD (zona local).
 function monthStart() {
   const now = new Date()
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
@@ -398,6 +416,8 @@ function selectProduct(p) {
   productOpen.value = false
 }
 
+// El desplegable se cierra al salir del bloque, con 120 ms de margen para que el
+// clic en una opción llegue al botón antes de que el DOM del listado desaparezca.
 function onProductFocusOut(e) {
   const container = e.currentTarget
   setTimeout(() => {
@@ -405,6 +425,7 @@ function onProductFocusOut(e) {
   }, 120)
 }
 
+// Preselecciona el primer almacén activo y deja el formulario en modo Entrada.
 function openCreate() {
   formError.value = ''
   Object.assign(form, {
@@ -426,6 +447,7 @@ function reset() {
 }
 
 async function save() {
+  // Validación en cliente antes de enviar; el backend vuelve a comprobar stock y permisos.
   formError.value = ''
   if (!form.productId) {
     formError.value = 'Seleccione el producto involucrado.'
@@ -446,6 +468,8 @@ async function save() {
 
   saving.value = true
   try {
+    // La fecha se envía a mediodía local para que la conversión a ISO no corrija
+    // el día por la zona horaria; el backend aplica el movimiento y recalcula el stock.
     await createMovement({
       type: form.type,
       productId: form.productId,
@@ -466,6 +490,8 @@ async function save() {
   }
 }
 
+// Se recarga tras cada movimiento porque cambia el stock que enseñan el
+// desplegable de productos y la pista de disponibilidad.
 async function refreshProducts() {
   products.value = await getProducts({ pageSize: 200, includeInactive: false }).then((r) => r.items)
 }

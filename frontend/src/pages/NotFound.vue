@@ -18,5 +18,6 @@
 </template>
 
 <script setup>
+// Vista 404 del catch-all del router (/:pathMatch*): sin lógica, solo el enlace de vuelta al panel.
 import { ArrowLeft, FileQuestion } from '@lucide/vue'
 </script>
