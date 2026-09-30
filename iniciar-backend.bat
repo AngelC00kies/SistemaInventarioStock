@@ -2,6 +2,11 @@
 title Sistema de Inventario - API
 cd /d "%~dp0backend"
 
+rem Pre-requisito: sin el SDK de .NET en el PATH, el doble clic solo mostraria un
+rem mensaje de cmd que la ventana cerraria sin dar tiempo a leer.
+where dotnet >nul 2>&1
+if errorlevel 1 goto :faltaDotnet
+
 rem Evita el error MSB3021/MSB3027 (DLL bloqueados) que aparece cuando ya
 rem hay una instancia en ejecucion y "dotnet run" vuelve a compilar.
 tasklist /fi "imagename eq SistemaInventario.Api.exe" | findstr /i /r /c:"SistemaInventario\.Api\.exe" >nul
@@ -16,6 +21,16 @@ if errorlevel 1 goto :fallo
 
 pause
 exit /b 0
+
+:faltaDotnet
+echo.
+echo [ERROR] No se encontro "dotnet" en el PATH de Windows.
+echo         Instale el SDK de .NET 8 y vuelva a ejecutar este archivo.
+echo         Si acaba de instalarlo, cierre el explorador de archivos y
+echo         vuelva a abrirlo para que tome el PATH nuevo.
+echo.
+pause
+exit /b 1
 
 :yaCorriendo
 echo.

@@ -21,4 +21,28 @@
     <ProjectReference Include="..\SistemaInventario.Reporting\SistemaInventario.Reporting.csproj" />
   </ItemGroup>
 
+  <!--
+    Guarda de compilación: evita compilar mientras una instancia de la API está en
+    ejecución. En ese caso MSBuild no puede copiar los DLL de Core, Infrastructure y
+    Reporting porque el proceso los tiene bloqueados, y tras 10 reintentos aborta con
+    un muro de 6 errores MSB3021/MSB3027. Preferimos detenernos antes con un único
+    mensaje accionable.
+
+    No estorba en el uso normal de Visual Studio: al volver a ejecutar, VS detiene su
+    propia instancia antes de compilar, de modo que la comprobación no encuentra
+    ningún proceso y la compilación sigue su curso. Solo salta cuando hay una instancia
+    lanzada desde fuera de VS (otra terminal, un acceso directo o una sesión olvidada).
+
+    El texto del error se escribe sin acentos a propósito: MSBuild lo imprime por la
+    consola, cuya página de códigos (OEM) no los decodificaría bien.
+  -->
+  <Target Name="ComprobarApiEnEjecucion" BeforeTargets="BeforeBuild">
+    <Exec Command="tasklist /fi &quot;imagename eq SistemaInventario.Api.exe&quot; /nh | findstr /i /r /c:&quot;SistemaInventario\.Api\.exe&quot; &gt;nul"
+          IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="ApiEnEjecucion" />
+    </Exec>
+    <Error Condition="'$(ApiEnEjecucion)' == '0'"
+           Text="La API ya esta en ejecucion (SistemaInventario.Api.exe). Detenga esa instancia antes de compilar o iniciar desde Visual Studio: MSBuild no puede copiar los DLL bloqueados y fallaria con MSB3021/MSB3027. Cierre la ventana que la arranco o finalice el proceso desde el Administrador de tareas." />
+  </Target>
+
 </Project>
