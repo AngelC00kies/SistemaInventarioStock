@@ -123,6 +123,10 @@
 </template>
 
 <script setup>
+// Acceso al sistema: delega el ciclo de sesión en el store de auth, que tras el login guarda
+// token y usuario en localStorage (si_token / si_user) para que la sesión sobreviva a una
+// recarga; el guard del router y el interceptor HTTP leen esos mismos valores.
+// Los errores de credenciales se pintan en el formulario, no como toast.
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -156,6 +160,7 @@ const features = [
   'Control de acceso por roles y usuarios',
 ]
 
+// Al autenticar se vuelve a la ruta que originó el guard (?redirect=) o al panel principal.
 async function submit() {
   error.value = ''
   try {

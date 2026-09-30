@@ -1,3 +1,5 @@
+// Catálogos maestros (categorías, proveedores y almacenes) con el mismo patrón CRUD que productos.
+// Los `params` viajan como query string y permiten filtrar en el servidor (p. ej. includeInactive).
 import http from './http'
 
 export const getCategories = (params) => http.get('/categories', { params }).then((r) => r.data)

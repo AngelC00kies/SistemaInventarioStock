@@ -142,6 +142,8 @@
 </template>
 
 <script setup>
+// Cabecera compartida por toda la sección autenticada: identifica la ruta activa (lee el `meta` que pone
+// el router) y reúne los controles globales: buscador de productos, almacén activo, notificaciones y sesión.
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Bell, ChevronDown, LogOut, Menu, Search, Warehouse } from '@lucide/vue'
@@ -161,6 +163,8 @@ const search = ref('')
 const showNotifications = ref(false)
 const showUserMenu = ref(false)
 
+// Puente entre el <select> y el store: el almacén elegido es estado global persistido en localStorage,
+// no una propiedad local de este componente, para que el resto de la app vea la misma selección.
 const warehouseId = computed({
   get: () => warehouseStore.selectedId,
   set: (value) => warehouseStore.select(Number(value)),
@@ -169,12 +173,16 @@ const warehouseId = computed({
 function toggleNotifications() {
   showNotifications.value = !showNotifications.value
   showUserMenu.value = false
+  // El listado solo se pide al abrir la campana: al montar ya se cargó el contador de no leídas, así el
+  // badge queda al día sin disparar peticiones en cada render.
   if (showNotifications.value) notifications.fetch()
 }
 
 function submitSearch() {
   const term = search.value.trim()
   if (!term) return
+  // No se filtra aquí: se navega a Products con ?search= y es esa página la que consulta a la API.
+  // Dejar el filtro en la URL hace que sobreviva a las recargas y al botón «atrás».
   router.push({ name: 'products', query: { search: term } })
 }
 
@@ -194,12 +202,16 @@ function formatDate(value) {
 
 function onClickOutside(e) {
   const target = e.target
+  // Cada desplegable está envuelto en un contenedor `.relative`: si el clic no cae en ninguno de ellos,
+  // se cierran a la vez la campana y el menú de usuario.
   if (!target.closest('.relative')) {
     showNotifications.value = false
     showUserMenu.value = false
   }
 }
 
+// Al montar se precarga lo que la cabecera muestra (badge de notificaciones y opciones del selector de
+// almacén) y se registra el detector de clics fuera de los desplegables.
 onMounted(() => {
   document.addEventListener('click', onClickOutside)
   notifications.fetch()

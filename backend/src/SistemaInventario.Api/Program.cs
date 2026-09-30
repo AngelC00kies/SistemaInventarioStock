@@ -67,10 +67,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtOptions.Issuer,
             ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey)),
+            // Se tolera 1 minuto de desfase entre relojes para no rechazar tokens válidos recién emitidos
             ClockSkew = TimeSpan.FromMinutes(1)
         };
     });
 
+// AdminOnly gobierna la gestión de usuarios; ReadWrite habilita las escrituras de inventario. El rol Auditor
+// no pertenece a ninguno de los dos, de modo que solo queda en el mínimo "Authenticated" (consulta y lectura).
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", p => p.RequireRole("Admin"));
@@ -109,6 +112,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+// Antes de atender peticiones se aplican las migraciones pendientes y se siembra la base vacía
+// (roles, usuarios iniciales y catálogo); si ya hay usuarios, el seed no hace nada.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

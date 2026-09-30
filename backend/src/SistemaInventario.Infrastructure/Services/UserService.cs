@@ -8,6 +8,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>Gestión de usuarios y roles, con protección del último administrador activo y bajas lógicas.</summary>
 public class UserService : IUserService
 {
     private readonly AppDbContext _db;
@@ -58,6 +59,7 @@ public class UserService : IUserService
         if (string.IsNullOrWhiteSpace(request.FullName))
             throw new AppException("El nombre completo es obligatorio.");
 
+        // El nombre se guarda en minúsculas y la unicidad se comprueba en ese formato.
         var username = request.Username.Trim().ToLower();
         if (await _db.Usuarios.AnyAsync(u => u.NombreUsuario == username, ct))
             throw new AppException("Ya existe un usuario con ese nombre.");
@@ -89,6 +91,7 @@ public class UserService : IUserService
         if (!await _db.Roles.AnyAsync(r => r.Id == request.RoleId, ct))
             throw new AppException("El rol seleccionado no es válido.");
 
+        // Regla de permisos: nunca se puede retirar el rol ni desactivar al último administrador activo, o la aplicación quedaría sin acceso.
         var currentAdmins = await _db.Usuarios.CountAsync(u => u.Rol.Nombre == "Admin" && u.Activo, ct);
         if (user.RolId != request.RoleId || !request.IsActive)
         {
@@ -112,6 +115,7 @@ public class UserService : IUserService
         return await GetAsync(id, ct);
     }
 
+    /// <summary>Elimina el usuario o lo da de baja cuando su historial impide el borrado físico.</summary>
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         var user = await _db.Usuarios.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Id == id, ct)
@@ -120,6 +124,7 @@ public class UserService : IUserService
         if (user.Rol.Nombre == "Admin")
             throw new AppException("No se puede eliminar un usuario administrador. Deshabilítelo en su lugar.");
 
+        // Baja lógica: se desactiva y se libera el nombre de usuario con un sufijo para poder crear otro con ese nombre sin alterar el histórico.
         if (await _db.Movimientos.AnyAsync(m => m.UsuarioId == id, ct))
         {
             user.Activo = false;

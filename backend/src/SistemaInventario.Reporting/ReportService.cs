@@ -8,15 +8,20 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Reporting;
 
+/// <summary>Arma la tabla de cada reporte (consulta, filtros, columnas y totales) y la entrega al generador.</summary>
 public class ReportService : IReportService
 {
+    // Formato chileno: miles ".", decimales "," y símbolo de moneda "$" en los totales
     private static readonly CultureInfo Es = CultureInfo.GetCultureInfo("es-CL");
     private readonly AppDbContext _db;
 
     public ReportService(AppDbContext db) => _db = db;
 
+    /// <summary>Resuelve el reporte y el formato pedidos y devuelve el fichero listo para descargar.</summary>
     public async Task<ReportFile> ExportAsync(string report, string format, ReportRequest request, CancellationToken ct = default)
     {
+        // Cada BuildXXX compone Columns (encabezados), Widths (pesos de ancho),
+        // Rows (celdas ya formateadas) y Summary (totales) de un mismo ReportTable
         var table = report.ToLowerInvariant() switch
         {
             "stock" => await BuildStockAsync(request, criticalOnly: false, ct),
@@ -38,6 +43,7 @@ public class ReportService : IReportService
 
         var content = isPdf ? PdfReportBuilder.Build(table) : ExcelReportBuilder.Build(table);
 
+        // El nombre lleva la marca de tiempo para que dos exportaciones seguidas no se sobrescriban
         return new ReportFile
         {
             Content = content,
@@ -50,12 +56,14 @@ public class ReportService : IReportService
 
     private async Task<ReportTable> BuildStockAsync(ReportRequest f, bool criticalOnly, CancellationToken ct)
     {
+        // Una fila = un nivel de stock (producto × almacén); por eso el mismo producto puede repetirse
         var query = _db.NivelesStock.AsNoTracking()
             .Include(s => s.Producto).ThenInclude(p => p.Categoria)
             .Include(s => s.Producto).ThenInclude(p => p.Proveedor)
             .Include(s => s.Almacen)
             .AsQueryable();
 
+        // Filtros opcionales; por defecto solo activos y el modo crítico recorta a cantidad <= stock mínimo
         if (!f.IncludeInactive) query = query.Where(s => s.Producto.Activo && s.Almacen.Activo);
         if (f.WarehouseId.HasValue) query = query.Where(s => s.AlmacenId == f.WarehouseId.Value);
         if (f.CategoryId.HasValue) query = query.Where(s => s.Producto.CategoriaId == f.CategoryId.Value);
@@ -87,6 +95,8 @@ public class ReportService : IReportService
             })
             .ToListAsync(ct);
 
+        // Estructura de columnas: identificación (código, producto, clasificación), ubicación,
+        // cifras de stock (cantidad, mínimo, precio) y de cierre (valorización y estado)
         var table = new ReportTable
         {
             Title = criticalOnly || f.CriticalOnly ? "Reporte de stock crítico" : "Reporte de stock actual",
@@ -102,6 +112,7 @@ public class ReportService : IReportService
         decimal totalValue = 0;
         var totalUnits = 0;
 
+        // Valorización del stock: cantidad × precio de venta, acumulada por cada fila producto-almacén
         foreach (var row in data)
         {
             var value = row.Cantidad * row.PrecioVenta;
@@ -124,6 +135,7 @@ public class ReportService : IReportService
             });
         }
 
+        // Un mismo SKU puede estar en varios almacenes: se cuentan códigos distintos, no filas
         table.Summary.Add(("SKU con stock", data.Select(d => d.Codigo).Distinct().Count().ToString("N0", Es)));
         table.Summary.Add(("Unidades totales", totalUnits.ToString("N0", Es)));
         table.Summary.Add(("Valor de stock", "$" + totalValue.ToString("N0", Es)));
@@ -143,6 +155,7 @@ public class ReportService : IReportService
         if (f.WarehouseId.HasValue) query = query.Where(m => m.AlmacenId == f.WarehouseId.Value);
         if (f.UserId.HasValue) query = query.Where(m => m.UsuarioId == f.UserId.Value);
         if (f.Type.HasValue) query = query.Where(m => m.Tipo == f.Type.Value);
+        // Filtro de fechas: "hasta" es el día completo, por eso se amplía hasta el último tick de esa jornada
         if (f.From.HasValue) query = query.Where(m => m.Fecha >= f.From.Value.ToUniversalTime());
         if (f.To.HasValue) query = query.Where(m => m.Fecha <= f.To.Value.ToUniversalTime().AddDays(1).AddTicks(-1));
 
@@ -190,6 +203,8 @@ public class ReportService : IReportService
         decimal entriesValue = 0;
         decimal exitsValue = 0;
 
+        // Total de la fila = cantidad × precio unitario del movimiento (entradas a precio de compra,
+        // salidas a precio de venta); el resumen separa unidades y valor de cada sentido
         foreach (var row in data)
         {
             var total = row.Cantidad * row.PrecioUnitario;
@@ -263,6 +278,7 @@ public class ReportService : IReportService
             }
         }.WithWidths(0.8, 2.2, 1.3, 1.6, 0.8, 0.7, 0.7, 1, 1, 0.9);
 
+        // El stock mostrado es la suma de los niveles de todos los almacenes, no el de uno solo
         foreach (var p in data)
         {
             var stock = p.NivelesStock.Sum(s => s.Cantidad);
@@ -277,6 +293,8 @@ public class ReportService : IReportService
                 p.StockMinimo.ToString("N0", Es),
                 p.PrecioCompra.ToString("N2", Es),
                 p.PrecioVenta.ToString("N2", Es),
+                // El servicio devuelve una clave ("ok"/"low"/"critical"/"empty") que aquí se traduce a etiqueta;
+                // un producto inactivo se muestra como tal sin evaluar su stock
                 p.Activo ? Mapping.ProductStatus(stock, p.StockMinimo) switch
                 {
                     "ok" => "Activo / OK",
@@ -401,6 +419,7 @@ public class ReportService : IReportService
         return table;
     }
 
+    // Escala del estado: sin stock (0), crítico hasta la mitad del mínimo (mínimo 1) y bajo hasta el mínimo
     private static string StatusText(int quantity, int minStock) => quantity switch
     {
         <= 0 => "Sin stock",
@@ -409,6 +428,7 @@ public class ReportService : IReportService
         _ => "OK"
     };
 
+    // Resume en el subtítulo los filtros aplicados para que el documento se entienda sin ver la petición
     private static string Describe(ReportRequest f)
     {
         var parts = new List<string>();

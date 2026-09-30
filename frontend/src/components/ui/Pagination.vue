@@ -51,8 +51,12 @@ const emit = defineEmits(['update:modelValue'])
 
 const pages = computed(() => Math.max(1, Math.ceil(props.total / props.pageSize)))
 const from = computed(() => (props.modelValue - 1) * props.pageSize + 1)
+// `to` se limita al total para que en la última página no se muestren índices inexistentes
 const to = computed(() => Math.min(props.total, props.modelValue * props.pageSize))
 
+// Ventana de 5 páginas centrada en la actual: `start` se ancla a 1 cuando se está cerca del
+// principio y a `last - 4` cuando se está cerca del final, de modo que la ventana completa
+// sea visible siempre que haya al menos 5 páginas; `end` nunca supera `last`.
 const visiblePages = computed(() => {
   const current = props.modelValue
   const last = pages.value

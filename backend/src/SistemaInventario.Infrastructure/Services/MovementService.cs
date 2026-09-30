@@ -9,6 +9,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>Registro y consulta de movimientos de stock, con control de existencias, transacción atómica y alertas de stock bajo.</summary>
 public class MovementService : IMovementService
 {
     private readonly AppDbContext _db;
@@ -37,6 +38,7 @@ public class MovementService : IMovementService
         var stock = await _db.NivelesStock
             .FirstOrDefaultAsync(s => s.ProductoId == request.ProductId && s.AlmacenId == request.WarehouseId, ct);
 
+        // Una salida nunca puede dejar el stock en negativo: se compara contra la existencia actual de ese producto en ese almacén.
         if (request.Type == MovementType.Salida)
         {
             var available = stock?.Cantidad ?? 0;
@@ -45,6 +47,7 @@ public class MovementService : IMovementService
                     $"Stock insuficiente. Disponible: {available} {product.Unidad.ToLower()} en {warehouse.Nombre}.");
         }
 
+        // Stock, movimiento y alerta se aplican juntos: si cualquier paso falla, la transacción lo revierte todo y nunca queda el stock desajustado.
         await using var transaction = await _db.Database.BeginTransactionAsync(ct);
 
         var isNewStock = stock is null;
@@ -58,6 +61,7 @@ public class MovementService : IMovementService
 
         stock.Cantidad += request.Type == MovementType.Entrada ? request.Quantity : -request.Quantity;
 
+        // Sin precio explícito se valora al precio de compra en entradas y al de venta en salidas (mismo criterio que usa el panel).
         var unitPrice = request.UnitPrice ??
                         (request.Type == MovementType.Entrada ? product.PrecioCompra : product.PrecioVenta);
 
@@ -108,6 +112,7 @@ public class MovementService : IMovementService
         if (filter.UserId.HasValue) query = query.Where(m => m.UsuarioId == filter.UserId.Value);
         if (filter.Type.HasValue) query = query.Where(m => m.Tipo == filter.Type.Value);
         if (filter.From.HasValue) query = query.Where(m => m.Fecha >= filter.From.Value.ToUniversalTime());
+        // El filtro "hasta" abarca el día completo: como Fecha se guarda en UTC, se suma 1 día menos un tick.
         if (filter.To.HasValue)
         {
             var to = filter.To.Value.ToUniversalTime().AddDays(1).AddTicks(-1);
@@ -147,6 +152,7 @@ public class MovementService : IMovementService
         return Mapping.ToDto(movement);
     }
 
+    // Al recuperarse por encima del mínimo se cierran los avisos abiertos; al quedar por debajo se crea uno (crítico al llegar a la mitad del mínimo).
     private async Task CheckLowStockAsync(Producto product, int warehouseId, int quantity, CancellationToken ct)
     {
         var pending = await _db.Notificaciones.AnyAsync(n =>

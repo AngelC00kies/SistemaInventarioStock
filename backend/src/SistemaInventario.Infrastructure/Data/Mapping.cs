@@ -3,10 +3,12 @@ using SistemaInventario.Core.Entities;
 
 namespace SistemaInventario.Infrastructure.Data;
 
+/// <summary>Convierte entidades de dominio en los DTOs que consume la API (campos en inglés, stock agregado y estado).</summary>
 public static class Mapping
 {
     public static string ProductStatus(int total, int minStock)
     {
+        // Estado según el stock total: vacío (0), bajo al llegar al mínimo y crítico al caer a la mitad (el Math.Max(1,…) evita un umbral 0 cuando el mínimo es 0 o 1).
         if (total <= 0) return "empty";
         if (total <= minStock) return total <= Math.Max(1, minStock / 2) ? "critical" : "low";
         return "ok";
@@ -35,6 +37,7 @@ public static class Mapping
             TotalStock = total,
             Status = ProductStatus(total, p.StockMinimo),
             CreatedAt = p.FechaCreacion,
+            // Con almacén informado se lista sólo ese almacén, pero TotalStock y Status siguen calculándose sobre el total de la red.
             StockByWarehouse = stockLevels
                 .Where(s => !warehouseId.HasValue || s.AlmacenId == warehouseId.Value)
                 .Select(s => new WarehouseStockDto
@@ -76,6 +79,7 @@ public static class Mapping
         Code = w.Codigo,
         Location = w.Ubicacion,
         IsActive = w.Activo,
+        // ProductCount = referencias con existencias > 0 en el almacén; TotalUnits = suma de unidades almacenadas.
         ProductCount = w.NivelesStock?.Count(s => s.Cantidad > 0) ?? 0,
         TotalUnits = w.NivelesStock?.Sum(s => s.Cantidad) ?? 0
     };

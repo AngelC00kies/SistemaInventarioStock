@@ -47,6 +47,8 @@ const props = defineProps({
   params: { type: Object, default: () => ({}) },
 })
 
+// `start`/`done` enmarcan la exportación para que el padre sepa cuándo está en curso
+// (p. ej. para bloquear la tabla); `done` se emite también cuando la petición falla
 const emit = defineEmits(['start', 'done'])
 const toast = useToastStore()
 

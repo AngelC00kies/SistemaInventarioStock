@@ -1,3 +1,5 @@
+// Operación diaria y administración: movimientos de stock, datos del panel, notificaciones y gestión de
+// usuarios/roles. Las notificaciones se leen aquí porque las consume el store homónimo del topbar.
 import http from './http'
 
 export const getMovements = (params) => http.get('/movements', { params }).then((r) => r.data)

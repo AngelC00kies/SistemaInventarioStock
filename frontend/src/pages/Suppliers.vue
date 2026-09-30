@@ -137,6 +137,10 @@
 </template>
 
 <script setup>
+// CRUD de proveedores: listado con búsqueda client-side, alta/edición en modal y borrado con
+// confirmación. Si el proveedor tiene productos asociados, el backend lo deja inactivo en vez
+// de eliminarlo (el diálogo ya anticipa esa consecuencia).
+// Las acciones de escritura solo aparecen con auth.canWrite (roles Admin y Usuario).
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { LoaderCircle, Pencil, Plus, Search, Trash2 } from '@lucide/vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
@@ -164,6 +168,7 @@ const includeInactive = ref(true)
 const empty = () => ({ id: null, name: '', contactName: '', phone: '', email: '', address: '', isActive: true })
 const form = reactive(empty())
 
+// Filtro de texto client-side: la API solo recibe includeInactive, nunca el término de búsqueda.
 const filtered = computed(() => {
   const term = search.value.trim().toLowerCase()
   if (!term) return items.value
@@ -189,6 +194,7 @@ function openCreate() {
 }
 
 function openEdit(s) {
+  // Parte de empty() para que un campo ausente no herede el valor del registro anterior.
   Object.assign(form, { ...empty(), ...s })
   modal.value = true
 }
@@ -237,6 +243,7 @@ async function remove() {
   await load()
 }
 
+// Recarga al alternar "incluir inactivos": ese filtro lo aplica el servidor, no el cliente.
 watch(includeInactive, load)
 
 onMounted(load)

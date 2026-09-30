@@ -6,6 +6,7 @@ using SistemaInventario.Core.Interfaces;
 
 namespace SistemaInventario.Api.Controllers;
 
+/// <summary>Autenticación: acceso con credenciales y consulta del perfil del usuario autenticado.</summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController : ControllerBase
@@ -22,6 +23,7 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>Devuelve el usuario representado por el token enviado (claim NameIdentifier).</summary>
     [HttpGet("me")]
     [Authorize]
     public async Task<ActionResult<UserDto>> Me(CancellationToken ct)

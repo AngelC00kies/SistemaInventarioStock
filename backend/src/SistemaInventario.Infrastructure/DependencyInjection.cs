@@ -9,8 +9,10 @@ namespace SistemaInventario.Infrastructure;
 
 public static class DependencyInjection
 {
+    /// <summary>Registra el DbContext de SQL Server y los servicios de infraestructura con ámbito scoped.</summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        // Las migraciones se declaran en este ensamblado para que "dotnet ef" las aplique sin referenciar la API.
         services.AddDbContext<AppDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),

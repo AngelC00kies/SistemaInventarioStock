@@ -6,6 +6,7 @@ using SistemaInventario.Core.Interfaces;
 
 namespace SistemaInventario.Api.Controllers;
 
+/// <summary>Productos con búsqueda, filtros y paginación, más su alta, edición y baja lógica.</summary>
 [ApiController]
 [Route("api/products")]
 [Authorize]

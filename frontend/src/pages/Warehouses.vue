@@ -122,6 +122,9 @@
 </template>
 
 <script setup>
+// CRUD de almacenes en formato de tarjetas: nombre, código, ubicación y ocupación actual
+// (unidades y SKU). El borrado se degrada a inactivación si hay movimientos o stock positivo.
+// Las acciones de escritura solo aparecen con auth.canWrite (roles Admin y Usuario).
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { LoaderCircle, Pencil, Plus, Search, Trash2, Warehouse } from '@lucide/vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
@@ -150,6 +153,7 @@ const includeInactive = ref(true)
 const empty = () => ({ id: null, name: '', code: '', location: '', isActive: true })
 const form = reactive(empty())
 
+// Filtro de texto client-side por nombre o código; el servidor solo recibe includeInactive.
 const filtered = computed(() => {
   const term = search.value.trim().toLowerCase()
   if (!term) return items.value
@@ -162,6 +166,8 @@ async function load() {
   loading.value = true
   try {
     items.value = await getWarehouses({ includeInactive: includeInactive.value })
+    // Fuerza la recarga del store compartido para que el selector del Topbar y el resto de la
+    // app vean de inmediato los cambios hechos aquí (el store cachea en memoria).
     await warehouseStore.load(true)
   } catch (e) {
     toast.error(e.message)
@@ -217,6 +223,7 @@ async function remove() {
   await load()
 }
 
+// Recarga al alternar "incluir inactivos": ese filtro lo aplica el servidor, no el cliente.
 watch(includeInactive, load)
 
 onMounted(load)

@@ -1,7 +1,18 @@
+/**
+ * Definiciones de los reportes de la vista "Reportes" (vista previa en tabla + exportación PDF/Excel).
+ * Cada clave de `reportDefs` describe un reporte con:
+ *   - title / description / icon: metadatos que se muestran en la tarjeta de selección.
+ *   - filters: códigos de filtros que la vista renderiza y reenvía a `load()`
+ *     ('warehouse', 'category', 'supplier', 'type', 'from', 'to', 'search'); [] = sin filtros.
+ *   - adminOnly: si está, el reporte solo se lista para el rol Admin.
+ *   - load(f): llama al endpoint indicado en cada caso y devuelve { columns, rows, summary },
+ *     donde cada celda es { text, cls?, badge? } (badge la pinta con el componente de estado).
+ */
 import { getCategories, getSuppliers, getWarehouses } from '@/api/catalogs'
 import { getProducts } from '@/api/products'
 import { getMovements, getUsers } from '@/api/operations'
 
+// Formateadores de presentación con locale es-CL: moneda CLP sin decimales, número y fecha/hora.
 const money = (v) =>
   new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v || 0)
 
@@ -23,6 +34,7 @@ export const reportDefs = {
     description: 'Existencias por producto y almacén con valorización.',
     icon: 'Boxes',
     filters: ['warehouse', 'category', 'search'],
+    // GET /api/products paginado a 200; la valorización multiplica stock total por precio de venta.
     async load(f) {
       const data = await getProducts({
         warehouseId: f.warehouseId ?? undefined,
@@ -51,6 +63,8 @@ export const reportDefs = {
     description: 'Productos que igualan o bajan del stock mínimo configurado.',
     icon: 'TriangleAlert',
     filters: ['warehouse', 'search'],
+    // onlyLowStock: true lo resuelve el backend (stock <= mínimo): sin ese prefiltro habría que
+    // descargar el catálogo completo y descartar en cliente casi todos los productos.
     async load(f) {
       const data = await getProducts({
         warehouseId: f.warehouseId ?? undefined,
@@ -79,6 +93,7 @@ export const reportDefs = {
     description: 'Historial de entradas y salidas filtrable por fecha, usuario y tipo.',
     icon: 'ArrowLeftRight',
     filters: ['warehouse', 'type', 'from', 'to', 'search'],
+    // GET /api/movements: entradas y salidas se separan solo para agregar el resumen final.
     async load(f) {
       const data = await getMovements({
         warehouseId: f.warehouseId ?? undefined,
@@ -115,6 +130,7 @@ export const reportDefs = {
     description: 'Listado completo con precios, categorías y proveedores.',
     icon: 'Package',
     filters: ['category', 'supplier', 'search'],
+    // GET /api/products con includeInactive: true para mostrar también los productos dados de baja.
     async load(f) {
       const data = await getProducts({
         categoryId: f.categoryId ?? undefined,
@@ -144,6 +160,7 @@ export const reportDefs = {
     description: 'Categorías de productos y cantidad asociada.',
     icon: 'Tags',
     filters: [],
+    // GET /api/categories: array plano sin paginación, por eso aquí no se accede a data.items.
     async load() {
       const data = await getCategories({ includeInactive: true })
       return {
@@ -164,6 +181,7 @@ export const reportDefs = {
     description: 'Directorio de proveedores y sus datos de contacto.',
     icon: 'Building2',
     filters: ['search'],
+    // GET /api/suppliers con búsqueda server-side; incluye inactivos (este reporte no expone ese filtro).
     async load(f) {
       const data = await getSuppliers({ includeInactive: true, search: f.search || undefined })
       return {
@@ -187,6 +205,7 @@ export const reportDefs = {
     icon: 'Users',
     adminOnly: true,
     filters: [],
+    // adminOnly lo oculta en Reports.vue a los no administradores; el endpoint /users también rechaza el rol.
     async load() {
       const data = await getUsers({ pageSize: 200 })
       return {
@@ -205,6 +224,8 @@ export const reportDefs = {
   },
 }
 
+// Catálogos base en paralelo (son independientes entre sí); se cargan una sola vez al montar
+// Reports.vue para rellenar los <select> de filtros sin repetir la petición en cada reporte.
 export async function loadCatalogOptions() {
   const [warehouses, categories, suppliers] = await Promise.all([
     getWarehouses(),
