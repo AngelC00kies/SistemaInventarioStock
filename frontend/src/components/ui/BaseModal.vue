@@ -1,6 +1,8 @@
 <template>
+  <!-- Va al body para que el overflow o el transform de algún ancestro no recorte ni aísle el modal -->
   <teleport to="body">
     <transition name="modal">
+      <!-- Dos capas con `mousedown.self`: cierra al pulsar el fondo translúcido o el área que rodea al diálogo -->
       <div
         v-if="modelValue"
         class="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-4 sm:p-6"
@@ -67,6 +69,8 @@ const sizes = {
 }
 const sizeClass = computed(() => sizes[props.size] || sizes.md)
 
+// `persistent` desactiva todas las vías de cierre (ESC, backdrop y botón X); ConfirmDialog
+// lo activa mientras `busy` para que una confirmación en curso no se pueda descartar
 function close() {
   if (props.persistent) return
   emit('update:modelValue', false)

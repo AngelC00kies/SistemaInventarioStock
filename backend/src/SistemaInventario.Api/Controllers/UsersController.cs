@@ -6,6 +6,7 @@ using SistemaInventario.Core.Interfaces;
 
 namespace SistemaInventario.Api.Controllers;
 
+/// <summary>Alta, edición y baja de usuarios, asignación de roles y consulta paginada.</summary>
 [ApiController]
 [Route("api/users")]
 [Authorize(Policy = "AdminOnly")]

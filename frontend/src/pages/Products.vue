@@ -259,6 +259,8 @@
 </template>
 
 <script setup>
+// Catálogo de productos: listado paginado con filtros combinados, alta y edición,
+// detalle con stock por almacén y eliminación que el backend puede degradar a baja lógica.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Eye, LoaderCircle, Pencil, Plus, Search, Trash2 } from '@lucide/vue'
@@ -291,6 +293,8 @@ const categories = ref([])
 const suppliers = ref([])
 const units = ['Unidad', 'Caja', 'Resma', 'Set', 'Bidón', 'Bobina', 'Paquete', 'Kilogramo', 'Metro', 'Par']
 
+// Filtros combinados: cada select o checkbox recarga desde la página 1 y la
+// búsqueda de texto espera 350 ms antes de disparar la petición.
 const filters = reactive({
   search: '',
   categoryId: null,
@@ -300,6 +304,8 @@ const filters = reactive({
   pageSize: 15,
 })
 
+// Fábrica del formulario vacío: se usa para crear, para reiniciar al cerrar el
+// modal y como estado inicial de `form`.
 const emptyForm = () => ({
   id: null,
   code: '',
@@ -316,18 +322,22 @@ const emptyForm = () => ({
 
 const form = reactive(emptyForm())
 
+// Filtros visibles que acompañan a la exportación; la paginación no se exporta.
 const exportParams = computed(() => ({
   search: filters.search,
   categoryId: filters.categoryId,
   supplierId: filters.supplierId,
 }))
 
+// Agrupa las teclas durante 350 ms para no lanzar una petición por carácter.
 let timer = null
 function debouncedLoad() {
   clearTimeout(timer)
   timer = setTimeout(() => load(1), 350)
 }
 
+// Todos los filtros viajan en la misma petición; los nulos se mandan como
+// `undefined` para que el backend los omita en lugar de filtrar por ellos.
 async function load(page) {
   if (page) filters.page = page
   loading.value = true
@@ -380,6 +390,8 @@ function reset() {
   Object.assign(form, emptyForm())
 }
 
+// La presencia de `form.id` distingue actualización de alta; el select de
+// categoría entrega un string, por eso se convierte a número antes de enviar.
 async function save() {
   saving.value = true
   try {
@@ -406,6 +418,8 @@ function askDelete(p) {
   confirm.value = true
 }
 
+// El backend puede convertir la baja en una marcación como inactivo cuando el
+// producto ya tiene movimientos asociados, en vez de eliminarlo.
 async function remove() {
   await deleteProduct(selected.value.id)
   toast.success('El producto fue eliminado.')
@@ -416,15 +430,19 @@ async function remove() {
 const money = (v) =>
   new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v || 0)
 
+// La barra se mide contra el doble del stock mínimo: al 50 % el stock está
+// justo en el mínimo; al 100 % lo duplica (o es máximo con mínimo en cero).
 const stockWidth = (p) => {
   const target = Math.max(p.minStock * 2, 1)
   return Math.min(100, Math.round((p.totalStock / target) * 100))
 }
+// Colores derivados del estado que calcula el backend (ok/low/critical/empty).
 const stockBar = (s) =>
   ({ ok: 'bg-emerald-500', low: 'bg-amber-500', critical: 'bg-rose-500', empty: 'bg-ink-300' })[s] || 'bg-ink-300'
 const stockText = (s) =>
   ({ ok: 'text-ink-800', low: 'text-amber-600', critical: 'text-rose-600', empty: 'text-ink-400' })[s] || 'text-ink-800'
 
+// Los query (?search=, ?low=) permiten enlazar desde el dashboard ya filtrado.
 onMounted(async () => {
   if (route.query.search) filters.search = route.query.search
   if (route.query.low) filters.onlyLowStock = true
@@ -435,6 +453,8 @@ onMounted(async () => {
   await load()
 })
 
+// Refleja en los filtros los query de navegación externa; el chequeo de
+// `route.name` evita recargar si la query cambia estando en una ruta hija.
 watch(
   () => route.query,
   () => {

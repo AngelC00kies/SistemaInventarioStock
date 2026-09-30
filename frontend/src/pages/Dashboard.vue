@@ -22,6 +22,7 @@
     </div>
 
     <template v-else-if="data">
+      <!-- KPIs: cobertura del catálogo, unidades disponibles, alertas de reposición y flujo de valor del mes -->
       <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Productos activos"
@@ -167,6 +168,9 @@
 </template>
 
 <script setup>
+// Panel principal: 4 KPIs (productos activos, unidades en stock, stock bajo y valor de salidas
+// del mes), gráfica de flujo de 30 días, stock por categoría, productos en nivel crítico y
+// movimientos recientes. Todo llega de golpe en una sola llamada a /api/dashboard.
 import { computed, onMounted, ref } from 'vue'
 import { Line, Doughnut } from 'vue-chartjs'
 import {
@@ -196,6 +200,8 @@ import StatusBadge from '@/components/ui/StatusBadge.vue'
 import { getDashboard } from '@/api/operations'
 import { useToastStore } from '@/stores/toast'
 
+// Registro global de Chart.js: sin estos ejes, puntos, relleno y leyenda, los componentes
+// <Line> y <Doughnut> de vue-chartjs no tienen con qué dibujar.
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend, ArcElement)
 
 const toast = useToastStore()
@@ -204,6 +210,8 @@ const loading = ref(true)
 
 const palette = ['#10b981', '#f43f5e', '#3b82f6', '#f59e0b', '#8b5cf6', '#06b6d4', '#84cc16', '#ec4899']
 
+// Convierte dailyFlow en el dataset de la gráfica de líneas: etiquetas con fecha local corta
+// y dos series (entradas en verde, salidas en rosa) rellenadas hasta el eje.
 const flowData = computed(() => ({
   labels: (data.value?.dailyFlow || []).map((d) =>
     new Date(d.date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
@@ -234,6 +242,8 @@ const flowData = computed(() => ({
   ],
 }))
 
+// maintainAspectRatio: false obliga a que el contenedor del template fije la altura
+// (h-[260px]); si no, Chart.js calcula el alto por ancho y se desborda de la tarjeta.
 const flowOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -245,6 +255,7 @@ const flowOptions = {
   },
 }
 
+// Unidades por categoría para el anillo; la paleta fija de 8 colores se repite si hay más series.
 const categoryData = computed(() => ({
   labels: (data.value?.categoryShare || []).map((c) => c.name),
   datasets: [
@@ -269,6 +280,7 @@ const categoryOptions = {
 const money = (v) =>
   new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(v || 0)
 
+// Estado (critical/low/empty) → color con el que se resalta la cifra de stock en la tabla.
 const stockColor = (status) =>
   ({ critical: 'text-rose-600', low: 'text-amber-600', empty: 'text-ink-500' })[status] || 'text-ink-800'
 

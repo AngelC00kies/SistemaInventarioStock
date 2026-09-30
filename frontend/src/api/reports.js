@@ -1,6 +1,9 @@
+// Descarga de reportes: pide el archivo al backend como `blob` y lo fuerza a guardarlo en disco desde el
+// navegador (no existe un enlace de descarga directa, así que se simula el clic sobre un <a> temporal).
 import http from './http'
 
 function filenameFrom(response, fallback) {
+  // Lee el nombre que sugiere el backend en Content-Disposition (admite filename* UTF-8); si falta, el de `fallback`.
   const header = response.headers?.['content-disposition'] || ''
   const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(header)
   return match ? decodeURIComponent(match[1]) : fallback
@@ -13,6 +16,8 @@ function filenameFrom(response, fallback) {
  * @param {object} params filtros
  */
 export async function downloadReport(report, format, params = {}) {
+  // Se descartan los filtros vacíos o ausentes para que el backend no reciba parámetros en blanco
+  // (por eso también se excluye `false`: solo se envían valores con significado).
   const cleanParams = Object.fromEntries(
     Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== false)
   )
@@ -34,6 +39,8 @@ export async function downloadReport(report, format, params = {}) {
   link.click()
   link.remove()
 
+  // La URL temporal se libera pasados 4 s: suficiente para que el navegador arranque la descarga,
+  // y así no se acumulan objetos blob en memoria.
   setTimeout(() => URL.revokeObjectURL(url), 4000)
   return name
 }

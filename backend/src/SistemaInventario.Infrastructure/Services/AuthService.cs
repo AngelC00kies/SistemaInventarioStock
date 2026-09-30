@@ -7,6 +7,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>Autenticación por usuario y contraseña con emisión del JWT y consulta del perfil en sesión.</summary>
 public class AuthService : IAuthService
 {
     private readonly AppDbContext _db;
@@ -25,9 +26,11 @@ public class AuthService : IAuthService
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.NombreUsuario == request.Username, ct);
 
+        // Mismo mensaje para usuario inexistente y contraseña errónea: evita descubrir qué cuentas existen en el sistema.
         if (user is null || !PasswordHasher.Verify(request.Password, user.ContrasenaHash))
             throw new AppException("Usuario o contraseña incorrectos.", 401);
 
+        // La cuenta deshabilitada se distingue con 403 para que el mensaje pueda indicar que contacte al administrador.
         if (!user.Activo)
             throw new AppException("La cuenta está deshabilitada. Contacte al administrador.", 403);
 

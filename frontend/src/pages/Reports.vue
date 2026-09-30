@@ -31,6 +31,8 @@
 
     <div class="card mt-5">
       <div class="flex flex-wrap items-end gap-3 border-b border-ink-200 px-4 py-3.5">
+        <!-- El resto de controles llevan su propio v-if con hasFilter(): solo se
+             muestran los filtros que el reporte activo declara como aplicables. -->
         <div v-if="hasFilter('search')" class="relative min-w-[200px] flex-1">
           <Search :size="15" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
           <input
@@ -131,6 +133,8 @@
 </template>
 
 <script setup>
+// Generador de reportes: cada reporte declara sus filtros y su carga de datos en
+// reportDefs; aquí se previsualizan sus filas y se exportan a PDF/Excel con esos mismos filtros.
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   ArrowLeftRight,
@@ -176,12 +180,15 @@ const filters = reactive({
 
 const preview = reactive({ loading: true, columns: [], rows: [], summary: '' })
 
+// Solo los reportes no restringidos a administrador se ofrecen al usuario actual.
 const visibleReports = computed(() =>
   Object.fromEntries(Object.entries(reportDefs).filter(([, def]) => !def.adminOnly || auth.isAdmin))
 )
 
 const currentDef = computed(() => reportDefs[selected.value])
 
+// Texto del estado vacío por reporte, para que "sin resultados" explique la
+// causa concreta (filtros demasiado estrechos, catálogos sin dar de alta, etc.).
 const emptyMessages = {
   stock: {
     title: 'Sin productos para mostrar',
@@ -213,8 +220,11 @@ const emptyMessages = {
   },
 }
 
+// Resuelve el par título/descripción para el reporte activo (con fallback al de stock).
 const emptyState = computed(() => emptyMessages[selected.value] || emptyMessages.stock)
 
+// Mismos filtros de la vista previa que viajan a la exportación; `criticalOnly`
+// se activa solo cuando el reporte seleccionado es el de stock crítico.
 const exportParams = computed(() => ({
   warehouseId: filters.warehouseId,
   categoryId: filters.categoryId,
@@ -226,8 +236,12 @@ const exportParams = computed(() => ({
   criticalOnly: selected.value === 'critical-stock' || undefined,
 }))
 
+// Cada reporte declara en `reportDefs` qué filtros le aplican; el resto de
+// controles no se renderizan, así que una misma barra sirve a varios reportes.
 const hasFilter = (name) => currentDef.value.filters.includes(name)
 
+// Alinea a la derecha únicamente las columnas numéricas conocidas por su nombre;
+// el resto se queda a la izquierda.
 function alignClass(col) {
   const right = ['Stock', 'Mínimo', 'Faltante', 'Valor stock', 'Cantidad', 'Total', 'P. compra', 'P. venta', 'Productos activos', 'Productos']
   return right.includes(col) ? 'text-right' : ''
@@ -235,6 +249,7 @@ function alignClass(col) {
 
 let skipNextWatch = false
 
+// Cambia de reporte y fuerza una recarga, limpiando antes los filtros del anterior.
 function selectReport(key) {
   if (selected.value === key) return
   selected.value = key
@@ -244,6 +259,8 @@ function selectReport(key) {
   loadPreview()
 }
 
+// Vacía todos los filtros al cambiar de reporte y devuelve `true` solo si alguno
+// vigilado cambió: así quien la llama puede saltarse el watch y no duplicar la petición.
 function resetFilters() {
   const watchedChanged = Boolean(
     filters.warehouseId || filters.categoryId || filters.supplierId || filters.type || filters.from || filters.to
@@ -258,12 +275,15 @@ function resetFilters() {
   return watchedChanged
 }
 
+// Agrupa las teclas durante 350 ms para no lanzar una petición por carácter.
 let timer = null
 function debouncedPreview() {
   clearTimeout(timer)
   timer = setTimeout(() => loadPreview(1), 350)
 }
 
+// Contador de peticiones: solo la última respuesta en llegar se aplica, de modo
+// que una respuesta tardía no pisa los datos (ni el estado de carga) de otra más reciente.
 let requestSeq = 0
 
 async function loadPreview() {
@@ -309,6 +329,8 @@ watch(
     filters.to,
   ],
   () => {
+    // Un solo filtro vigilado que cambie ya recarga; el salto lo pone
+    // selectReport cuando el propio cambio de reporte dispara este watch.
     if (skipNextWatch) {
       skipNextWatch = false
       return

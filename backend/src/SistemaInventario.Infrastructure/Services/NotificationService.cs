@@ -6,6 +6,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>Consulta y marcado de las notificaciones de stock bajo generadas al registrar movimientos.</summary>
 public class NotificationService : INotificationService
 {
     private readonly AppDbContext _db;
@@ -21,6 +22,7 @@ public class NotificationService : INotificationService
 
         if (onlyUnread) query = query.Where(n => !n.Leida);
 
+        // Orden por estado de lectura (descendente sobre el bool) y después por fecha, de más reciente a más antigua; el límite se acota a 200.
         return await query
             .OrderByDescending(n => n.Leida)
             .ThenByDescending(n => n.FechaCreacion)

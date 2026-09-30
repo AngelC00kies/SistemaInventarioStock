@@ -4,6 +4,7 @@ using SistemaInventario.Core.Enums;
 
 namespace SistemaInventario.Infrastructure.Data;
 
+/// <summary>Modelo EF Core del inventario: tablas, claves, índices y relaciones definidos por configuración fluent.</summary>
 public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -30,6 +31,7 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.Nombre).IsUnique();
         });
 
+        // Índice único: la unicidad del nombre de usuario se garantiza también en base de datos, no sólo en los servicios.
         modelBuilder.Entity<Usuario>(e =>
         {
             e.ToTable("Usuarios");
@@ -74,6 +76,7 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.Codigo).IsUnique();
         });
 
+        // Código único; la categoría no se puede borrar si tiene productos (Restrict), mientras que el proveedor se limpia con SetNull sin afectar al producto.
         modelBuilder.Entity<Producto>(e =>
         {
             e.ToTable("Productos");
@@ -91,6 +94,7 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
+        // Clave compuesta producto–almacén: cada producto aparece una sola vez por almacén, y el borrado en cascada lo limpia desde cualquiera de los dos lados.
         modelBuilder.Entity<NivelStock>(e =>
         {
             e.ToTable("NivelesStock");
@@ -101,6 +105,7 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Los movimientos son histórico: producto, almacén y usuario se borran con Restrict para no perder registros ya asentados.
         modelBuilder.Entity<Movimiento>(e =>
         {
             e.ToTable("Movimientos");
@@ -118,6 +123,7 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // Índice sobre Leida para el listado de pendientes; producto y almacén se borran en cascada porque el aviso deja de tener sentido sin ellos.
         modelBuilder.Entity<Notificacion>(e =>
         {
             e.ToTable("Notificaciones");

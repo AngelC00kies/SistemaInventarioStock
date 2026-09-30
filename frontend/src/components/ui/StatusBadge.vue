@@ -13,6 +13,11 @@ const props = defineProps({
   label: { type: String, default: '' },
 })
 
+/**
+ * Estado -> (clase del badge, etiqueta por defecto y color del punto).
+ * Agrupa tres familias: stock (ok/low/critical/empty), movimientos (Entrada/Salida)
+ * y estados booleanos (active/inactive). Un estado no reconocido cae en `ok`.
+ */
 const map = {
   ok: { cls: 'badge-ok', label: 'Óptimo', dot: 'bg-emerald-500' },
   low: { cls: 'badge-low', label: 'Stock bajo', dot: 'bg-amber-500' },

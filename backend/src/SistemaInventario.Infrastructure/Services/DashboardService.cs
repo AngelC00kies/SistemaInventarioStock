@@ -6,6 +6,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>Agrega los indicadores del panel: contadores, valorización mensual, flujo diario, categorías y productos críticos.</summary>
 public class DashboardService : IDashboardService
 {
     private readonly AppDbContext _db;
@@ -21,6 +22,7 @@ public class DashboardService : IDashboardService
         var now = DateTime.UtcNow;
         var today = now.Date;
         var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        // Ventanas en UTC: el mes en curso y los últimos 30 días (hoy incluido, por eso -29).
         var flowStart = today.AddDays(-29);
 
         var totalProducts = await products.CountAsync(ct);
@@ -33,6 +35,7 @@ public class DashboardService : IDashboardService
 
         var movementsToday = await movements.CountAsync(m => m.Fecha >= today, ct);
 
+        // Valorización mensual: Σ(cantidad × precio unitario) con el precio congelado en cada movimiento (compra en entradas, venta en salidas).
         var monthlyIn = await movements
             .Where(m => m.Tipo == MovementType.Entrada && m.Fecha >= monthStart)
             .SumAsync(m => (decimal?)(m.Cantidad * m.PrecioUnitario), ct) ?? 0m;
@@ -53,6 +56,7 @@ public class DashboardService : IDashboardService
             .ToListAsync(ct);
 
         var dailyFlow = new List<DailyFlowDto>();
+        // Se generan los 30 días aunque no haya movimientos, para que la gráfica no tenga huecos.
         for (var i = 29; i >= 0; i--)
         {
             var day = today.AddDays(-i);
@@ -89,6 +93,7 @@ public class DashboardService : IDashboardService
             .ThenByDescending(c => c.Products)
             .ToList();
 
+        // Los 8 déficits más grandes (cantidad − stock mínimo) para la tabla de productos críticos del panel.
         var critical = await products
             .SelectMany(p => p.NivelesStock.Select(s => new
             {

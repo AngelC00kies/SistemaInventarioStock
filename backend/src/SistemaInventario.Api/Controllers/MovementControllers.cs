@@ -7,6 +7,7 @@ using SistemaInventario.Core.Interfaces;
 
 namespace SistemaInventario.Api.Controllers;
 
+/// <summary>Movimientos de inventario: consulta con filtros y registro de entradas y salidas.</summary>
 [ApiController]
 [Route("api/movements")]
 [Authorize]
@@ -28,12 +29,14 @@ public class MovementsController : ControllerBase
     [Authorize(Policy = "ReadWrite")]
     public async Task<ActionResult<MovementDto>> Create([FromBody] CreateMovementRequest request, CancellationToken ct)
     {
+        // El autor se toma del token, nunca del cuerpo, para que quede trazado quién realizó el movimiento
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         var created = await _movements.CreateAsync(request, userId, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 }
 
+/// <summary>Indicadores agregados que alimentan el panel principal.</summary>
 [ApiController]
 [Route("api/dashboard")]
 [Authorize]
@@ -48,6 +51,7 @@ public class DashboardController : ControllerBase
         => Ok(await _dashboard.GetAsync(ct));
 }
 
+/// <summary>Avisos al usuario: listado, contador de no leídos y marcado como leído.</summary>
 [ApiController]
 [Route("api/notifications")]
 [Authorize]

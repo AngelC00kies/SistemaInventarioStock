@@ -6,6 +6,7 @@ using SistemaInventario.Infrastructure.Data;
 
 namespace SistemaInventario.Infrastructure.Services;
 
+/// <summary>CRUD de categorías con unicidad de nombre y borrado protegido frente a productos asociados.</summary>
 public class CategoryService : ICategoryService
 {
     private readonly AppDbContext _db;
@@ -72,6 +73,7 @@ public class CategoryService : ICategoryService
         var category = await _db.Categorias.FirstOrDefaultAsync(c => c.Id == id, ct)
             ?? throw new NotFoundException("Categoría no encontrada.");
 
+        // Con productos asociados sólo se desactiva: borrarla dejaría esos productos sin categoría.
         if (await _db.Productos.AnyAsync(p => p.CategoriaId == id, ct))
         {
             category.Activo = false;
@@ -89,6 +91,7 @@ public class CategoryService : ICategoryService
         if (string.IsNullOrWhiteSpace(request.Name))
             throw new AppException("El nombre de la categoría es obligatorio.");
 
+        // Unicidad del nombre sin distinguir mayúsculas: ambas partes se comparan en minúsculas.
         var name = request.Name.Trim().ToLower();
         if (await _db.Categorias.AnyAsync(c => c.Nombre.ToLower() == name && c.Id != currentId, ct))
             throw new AppException($"Ya existe una categoría llamada \"{request.Name.Trim()}\".");

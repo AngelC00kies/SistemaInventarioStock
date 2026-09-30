@@ -1,4 +1,5 @@
 <template>
+  <!-- Mientras procesa el modal es persistente: no se cierra por ESC, backdrop ni botón X -->
   <BaseModal v-model="open" :title="title" size="sm" :persistent="busy" @close="onCancel">
     <div class="flex gap-4">
       <span
@@ -58,6 +59,8 @@ watch(
 )
 watch(open, (v) => emit('update:modelValue', v))
 
+// `persistent` solo cubre el cierre desde fuera del modal: Cancelar está dentro, así que
+// necesita su propia guardia para no descartar una confirmación mientras `busy`
 function onCancel() {
   if (busy.value) return
   open.value = false

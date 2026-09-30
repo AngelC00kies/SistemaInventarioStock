@@ -10,6 +10,7 @@
       <p v-if="description" class="mt-1.5 max-w-2xl text-sm text-ink-500">{{ description }}</p>
     </div>
 
+    <!-- Solo se pinta si el slot `actions` se usa: evita un contenedor vacío que sumaría gap -->
     <div v-if="$slots.actions" class="flex flex-wrap items-center gap-2">
       <slot name="actions" />
     </div>

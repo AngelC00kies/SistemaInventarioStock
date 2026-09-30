@@ -5,15 +5,19 @@ using SistemaInventario.Infrastructure.Auth;
 
 namespace SistemaInventario.Infrastructure.Data;
 
+/// <summary>Semilla de datos de demostración: roles, usuarios de prueba, catálogo inicial, movimientos y alertas.</summary>
 public static class SeedData
 {
+    // Contraseñas de las cuentas de demostración; se publican para poder entrar en local, no deben usarse en producción.
     public static readonly string AdminPassword = "Admin123!";
     public static readonly string UserPassword = "Usuario123!";
 
     public static async Task InitializeAsync(AppDbContext db)
     {
+        // Guarda de idempotencia: si ya hay usuarios, la base está sembrada y no se vuelve a poblar.
         if (await db.Usuarios.AnyAsync()) return;
 
+        // Un usuario por rol para poder probar la autorización (Admin, Usuario y Auditor) sin crear cuentas a mano.
         var roles = new List<Rol>
         {
             new() { Nombre = "Admin", Descripcion = "Acceso total al sistema" },
@@ -50,6 +54,7 @@ public static class SeedData
         db.AddRange(admin, operatorUser, auditor);
         await db.SaveChangesAsync();
 
+        // Catálogo inicial de demostración: 5 categorías, 3 proveedores, 3 almacenes y 12 productos con precios y stock mínimo variados para probar alertas.
         var categorias = new List<Categoria>
         {
             new() { Nombre = "Electrónica", Descripcion = "Equipos y componentes electrónicos" },
@@ -97,6 +102,7 @@ public static class SeedData
         db.AddRange(productos);
         await db.SaveChangesAsync();
 
+        // Semilla fija: la demo genera siempre los mismos niveles de stock y movimientos, lo que hace reproducibles las pruebas y las capturas.
         var random = new Random(20260924);
         var now = DateTime.UtcNow;
 
@@ -121,6 +127,7 @@ public static class SeedData
         };
 
         var movimientos = new List<Movimiento>();
+        // 90 movimientos de los últimos 45 días: las salidas nunca dejan el stock en negativo y cada uno guarda su stock resultante.
         for (var i = 0; i < 90; i++)
         {
             var producto = productos[random.Next(productos.Count)];
@@ -170,6 +177,7 @@ public static class SeedData
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Crea avisos de stock bajo para los niveles por debajo del mínimo, sin duplicar los ya pendientes.</summary>
     public static async Task GenerateLowStockNotificationsAsync(AppDbContext db)
     {
         var lows = await db.NivelesStock
@@ -180,6 +188,7 @@ public static class SeedData
 
         foreach (var level in lows)
         {
+            // Sólo se notifica si no queda ya un aviso sin leer para ese mismo producto y almacén, para no duplicarlos.
             var exists = await db.Notificaciones.AnyAsync(n =>
                 n.ProductoId == level.ProductoId &&
                 n.AlmacenId == level.AlmacenId &&

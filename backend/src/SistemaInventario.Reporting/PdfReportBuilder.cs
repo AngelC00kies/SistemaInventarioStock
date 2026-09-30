@@ -4,6 +4,7 @@ using QuestPDF.Infrastructure;
 
 namespace SistemaInventario.Reporting;
 
+/// <summary>Compone el PDF del reporte con QuestPDF: cabecera, tarjetas de resumen, tabla y pie con numeración.</summary>
 public static class PdfReportBuilder
 {
     private const string Primary = "#1E3A5F";
@@ -21,6 +22,7 @@ public static class PdfReportBuilder
         {
             container.Page(page =>
             {
+                // A4 horizontal: los reportes llegan a 12 columnas y en vertical no caben legibles
                 page.Size(PageSizes.A4.Landscape());
                 page.Margin(28);
                 page.DefaultTextStyle(t => t.FontFamily(Font).FontSize(8.5f).FontColor("#0F172A"));
@@ -56,6 +58,7 @@ public static class PdfReportBuilder
 
                 page.Content().PaddingVertical(10).Column(col =>
                 {
+                    // Tarjetas con los totales calculados por el ReportService, en una fila sobre la tabla
                     if (table.Summary.Count > 0)
                     {
                         col.Item().Row(row =>
@@ -76,6 +79,7 @@ public static class PdfReportBuilder
 
                     col.Item().Table(t =>
                     {
+                        // Anchura relativa = peso de la columna / suma de pesos; sin pesos, todas valen 1
                         var totalWeight = table.Widths.Count == table.Columns.Count
                             ? table.Widths.Sum(w => w.Weight)
                             : table.Columns.Count;

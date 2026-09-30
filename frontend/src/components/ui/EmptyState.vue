@@ -17,6 +17,8 @@ import { PackageSearch } from '@lucide/vue'
 defineProps({
   title: { type: String, default: 'Sin resultados' },
   description: { type: String, default: 'No se encontraron registros que coincidan con los filtros aplicados.' },
+  // Los iconos de lucide son componentes funcionales: debe tiparse como Function y no como
+  // Object, porque Vue invocaría un default de tipo Object como factory y fallaría al pintarlo.
   icon: { type: Function, default: PackageSearch },
 })
 </script>

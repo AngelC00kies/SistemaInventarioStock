@@ -78,6 +78,9 @@
 </template>
 
 <script setup>
+// Barra lateral de navegación: agrupa las rutas por sección y resalta la activa.
+// El menú no está escrito a mano en el template sino generado en `groups`, para poder filtrar entradas
+// según el rol del usuario antes de pintarlas.
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeftRight, Boxes, FileBarChart, LayoutDashboard, LogOut, Package, Tags, Users, Warehouse, X, Building2 } from '@lucide/vue'
@@ -115,6 +118,8 @@ const groups = computed(() => {
     },
   ]
 
+  // Navegación condicionada por permisos: la sección 'Sistema' solo se añade para Admin, de modo que el
+  // resto de roles ni ve el enlace (el guard adminOnly de la ruta sigue siendo la barrera de respaldo).
   if (auth.isAdmin) {
     list.push({
       label: 'Sistema',
@@ -125,6 +130,7 @@ const groups = computed(() => {
   return list
 })
 
+// Se compara por prefijo (no por igualdad) para que las subrutas mantengan resaltada su entrada de menú.
 const isActive = (item) => route.path.startsWith(item.to)
 
 function logout() {

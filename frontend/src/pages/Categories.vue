@@ -114,6 +114,9 @@
 </template>
 
 <script setup>
+// CRUD de categorías: listado con búsqueda client-side y alta/edición en modal. El borrado se
+// degrada a inactivación cuando la categoría tiene productos, para no romper el historial.
+// Las acciones de escritura solo aparecen con auth.canWrite (roles Admin y Usuario).
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { LoaderCircle, Pencil, Plus, Search, Trash2 } from '@lucide/vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
@@ -140,6 +143,7 @@ const includeInactive = ref(true)
 
 const form = reactive({ id: null, name: '', description: '', isActive: true })
 
+// Filtro de texto client-side: la API solo recibe includeInactive, nunca el término de búsqueda.
 const filtered = computed(() => {
   const term = search.value.trim().toLowerCase()
   if (!term) return items.value
@@ -204,6 +208,7 @@ async function remove() {
   await load()
 }
 
+// Recarga al alternar "incluir inactivas": ese filtro lo aplica el servidor, no el cliente.
 watch(includeInactive, load)
 
 onMounted(load)

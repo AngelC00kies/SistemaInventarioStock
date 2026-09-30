@@ -1,3 +1,5 @@
+// CRUD de productos (/api/products). Como el resto de módulos de esta carpeta, cada función devuelve ya el
+// body desembricado (`r.data`) para que las vistas trabajen directamente con los datos.
 import http from './http'
 
 export const getProducts = (params) => http.get('/products', { params }).then((r) => r.data)
