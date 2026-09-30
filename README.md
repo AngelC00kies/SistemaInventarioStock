@@ -195,7 +195,8 @@ en la raíz del proyecto (requieren haber ejecutado `npm install` y
 | `Login failed for user '...'` | Autenticación incorrecta | Use `Trusted_Connection=True` (Windows) o `User Id=sa;Password=...` correctamente |
 | `The certificate chain was issued by an authority that is not trusted` | TLS del certificado SQL | Mantenga `TrustServerCertificate=True` en la cadena |
 | `Unable to obtain lock...` o puerto `5080` ocupado | Otra instancia de la API ya está corriendo | Cierre el proceso anterior o cambie `applicationUrl` en `Properties/launchSettings.json` |
-| `EADDRINUSE: address already in use :::5173` | Otra instancia de Vite corriendo | Cierre la terminal anterior o use `npm run dev -- --port 5174` |
+| `MSB3021`/`MSB3027` (archivo bloqueado por otro proceso) | Ya hay una instancia de la API en marcha y `dotnet run` vuelve a compilar | Termine el proceso `SistemaInventario.Api`; `iniciar-backend.bat` detecta el caso y muestra un aviso antes de compilar |
+| `EADDRINUSE: address already in use :::5173` | Otra instancia de Vite corriendo | Cierre la terminal anterior; `iniciar-frontend.bat` usa `--strictPort` y avisa en vez de saltar al puerto 5174 |
 | `npm ERR! Cannot find module ...` | Faltan dependencias | Borre la carpeta `node_modules` (deje `package-lock.json`) y ejecute `npm install` de nuevo |
 | El frontend carga pero dice error 401/403 | Token o rol incorrecto | Vuelva a iniciar sesión; verifique el usuario y la tabla de permisos |
 | El frontend carga pero `/api` da error de conexión | El backend no está corriendo | Arranque primero el backend (`iniciar-backend.bat`) y recargue |
