@@ -443,17 +443,3 @@ Se usan dos proveedores:
 | Autor | Perfil |
 |---|---|
 | Angel C00kies | [@AngelC00kies](https://github.com/AngelC00kies) |
-
-### Proyecto
-
-| Dato | Valor |
-|---|---|
-| Nombre | `prueba-full-stack` |
-| Descripción | Sistema web para registrar y controlar la entrada, la salida y el stock de productos en uno o varios almacenes |
-| Repositorio | [AngelC00kies/SistemaInventarioStock](https://github.com/AngelC00kies/SistemaInventarioStock) |
-| Ramas principales | `main` (integrado) y `develop` (recibe las ramas con `--no-ff`) |
-| Backend | ASP.NET Core 8 + EF Core + SQL Server — puerto `5080` |
-| Frontend | Vue 3 + Vite + Tailwind CSS — puerto `5173` |
-| Reportes | PDF (QuestPDF) y Excel (ClosedXML) generados en el servidor |
-| Pruebas | 164 pruebas unitarias xUnit, ejecutadas en cada push por GitHub Actions |
-| Usuarios demo | `admin`, `operador` y `auditor` (contraseñas en la sección 3) |
