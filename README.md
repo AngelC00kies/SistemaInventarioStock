@@ -6,6 +6,7 @@ productos en uno o varios almacenes.
 - **Frontend:** Vue 3 + Vite + Tailwind CSS + Pinia + Vue Router + Chart.js (iconos Lucide)
 - **Backend:** ASP.NET Core 8 Web API + Entity Framework Core + SQL Server + JWT
 - **Reportes:** QuestPDF (PDF) y ClosedXML (Excel) generados en el servidor
+- **Pruebas:** xUnit con EF Core sobre SQLite en memoria (164 pruebas, ejecutadas por GitHub Actions)
 
 ---
 
@@ -40,6 +41,20 @@ productos en uno o varios almacenes.
 | [QuestPDF](https://www.questpdf.com/) | 2024.12.3 | Generación de PDF |
 | [ClosedXML](https://closedxml.github.io/) | 0.104.2 | Generación de Excel |
 
+### Pruebas
+
+| Tecnología | Versión | Uso |
+|---|---|---|
+| [xUnit](https://xunit.net/) | 2.9.2 | Framework de pruebas unitarias (`[Fact]`, `[Theory]`) |
+| [xunit.runner.visualstudio](https://xunit.net/docs/visual-studio.html) | 2.8.2 | Integración con el explorador de pruebas de Visual Studio |
+| [Microsoft.NET.Test.Sdk](https://learn.microsoft.com/visualstudio/test/) | 17.11.1 | Ejecutor que hace funcionar `dotnet test` |
+| [Microsoft.EntityFrameworkCore.Sqlite](https://learn.microsoft.com/ef/core/providers/sqlite/) | 8.0.11 | BD SQLite en memoria: traduce el LINQ a SQL y soporta transacciones |
+| [Microsoft.EntityFrameworkCore.InMemory](https://learn.microsoft.com/ef/core/providers/in-memory/) | 8.0.11 | Proveedor puntual para `DashboardService` (SQLite no aplica `SUM` a `decimal`) |
+| [GitHub Actions](https://docs.github.com/actions) | — | Ejecuta `dotnet test` en cada push y PR (`.github/workflows/pruebas.yml`) |
+
+Los tres paquetes de pruebas son **dependencias solo de `backend/tests/`**: la aplicación
+en producción no lleva ninguno de ellos.
+
 ### Base de datos
 
 | Tecnología | Versión | Uso |
@@ -55,6 +70,7 @@ productos en uno o varios almacenes.
 | [Node.js](https://nodejs.org/) | 18+ (LTS, probado con 22) | Ejecutar el frontend |
 | npm | incluido con Node.js | Instalar dependencias |
 | [Visual Studio 2022](https://visualstudio.microsoft.com/) o [VS Code](https://code.visualstudio.com/) (opcional) | — | Editar/correr el backend |
+| `dotnet test` | incluido con el SDK | Ejecutar las pruebas unitarias del backend |
 
 ---
 
@@ -216,6 +232,8 @@ SistemaInventario/
 │   │   ├── SistemaInventario.Core/           Entidades, DTOs, contratos de servicios
 │   │   ├── SistemaInventario.Infrastructure/ EF Core, migraciones, seed y servicios
 │   │   └── SistemaInventario.Reporting/      Generación de PDF (QuestPDF) y Excel (ClosedXML)
+│   ├── tests/
+│   │   └── SistemaInventario.Tests/          Pruebas unitarias (xUnit, SQLite en memoria)
 │   └── SistemaInventario.sln
 ├── frontend/
 │   ├── package.json                 Dependencias y scripts (dev/build/preview)
@@ -282,6 +300,7 @@ afectado.
 | `feature/base-datos` | Renombrado de tablas, columnas, índices y entidades C# |
 | `feature/script-sql` | `database/inventario.sql` |
 | `feature/docs-readme` | Este README: estructura, esquema de datos y ramas |
+| `tests/servicios-api` | Pruebas unitarias de los servicios (xUnit) y sección 9 de este README |
 
 ---
 
@@ -363,3 +382,63 @@ GET|POST       /api/users              PUT|DELETE /api/users/{id}
 GET    /api/reports/{report}/{format}  report = stock|critical-stock|movements|products|categories|suppliers|users
                                        format  = pdf|xlsx
 ```
+
+---
+
+## 9. Pruebas unitarias
+
+El proyecto `backend/tests/SistemaInventario.Tests` forma parte de
+`backend/SistemaInventario.sln`, así que aparece en el explorador de soluciones de
+Visual Studio junto al resto.
+
+### Cómo ejecutarlas
+
+| Dónde | Cómo |
+|---|---|
+| Terminal | `dotnet test backend/SistemaInventario.sln` |
+| Visual Studio | Botón derecho en la solución → **Ejecutar todas las pruebas** |
+| GitHub Actions | Automático en cada push y en cada PR hacia `main` o `develop` (`.github/workflows/pruebas.yml`) |
+
+### Base de datos de prueba
+
+Las pruebas **no tocan SQL Server**. Cada test crea su propia base con el esquema
+generado desde el modelo EF, la siembra con los ayudantes de
+`tests/SistemaInventario.Tests/Infrastructure/Seed.cs` y la destruye al terminar: ningún
+test ve los datos de otro.
+
+Se usan dos proveedores:
+
+- **SQLite en memoria** (el habitual): un proveedor relacional de verdad, así que
+  comprueba que las consultas LINQ se traduzcan a SQL y soporta las transacciones que
+  abre `MovementService`.
+- **EF Core InMemory**: solo para `DashboardService`, porque SQLite no sabe aplicar `SUM`
+  a una columna `decimal` y ese servicio agrega importes en dinero. Al ser de solo
+  lectura no echa en falta la transaccionalidad que este proveedor no ofrece.
+
+### Qué cubre cada archivo
+
+| Archivo | Pruebas | Qué se comprueba |
+|---|---:|---|
+| `MovementServiceTests.cs` | 29 | Validaciones, control de existencias, transacción, valorización por defecto, avisos Warning/Critical y su cierre, filtros y paginación |
+| `ProductServiceTests.cs` | 21 | Validaciones de alta, estado derivado (`ok`/`low`/`critical`/`empty`), filtros y paginación |
+| `UserServiceTests.cs` | 18 | Alta con hash, unicidad, cambio de contraseña y la regla del último administrador |
+| `MappingTests.cs` | 14 | Umbrales de `ProductStatus` y conversión entidad → DTO |
+| `ReportServiceTests.cs` | 14 | Los 7 reportes en PDF y Excel, nombre y tipo MIME, y errores de reporte o formato |
+| `CategoryServiceTests.cs` | 11 | CRUD, unicidad de nombre y borrado protegido por productos |
+| `DashboardServiceTests.cs` | 10 | KPIs, valorización mensual, flujo de 30 días, categorías y productos críticos |
+| `NotificationServiceTests.cs` | 9 | Límite 1..200, filtro de no leídas y marcado individual y masivo |
+| `PasswordHasherTests.cs` | 9 | Formato del hash, sal por usuario y verificación |
+| `WarehouseServiceTests.cs` | 9 | Código único normalizado y borrado protegido |
+| `AuthServiceTests.cs` | 7 | Login correcto, credenciales inválidas (401), cuenta deshabilitada (403) y `/auth/me` |
+| `SupplierServiceTests.cs` | 7 | Validación del correo, unicidad y borrado protegido |
+| `JwtTokenGeneratorTests.cs` | 6 | Claims embebidos, emisor y audiencia, caducidad y firma |
+| **Total** | **164** | |
+
+### Un fallo que la suite ya ha destapado
+
+La primera ejecución puso de manifiesto que `UserService.UpdateAsync` leía `user.Rol` sin
+cargarlo con `Include`. Como el contexto de cada petición llega vacío, cambiar el rol o
+desactivar un usuario terminaba en `NullReferenceException` (HTTP 500) en vez del mensaje
+de negocio «No es posible retirar el último administrador activo del sistema» (HTTP 400).
+Se corrigió añadiendo el `Include`, igual que ya hacía `DeleteAsync`, y la regresión queda
+cubierta por `UpdateAsync_EnUnContextoNuevo_TambienProtegeAlUltimoAdmin`.

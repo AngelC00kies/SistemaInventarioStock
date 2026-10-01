@@ -83,7 +83,10 @@ public class UserService : IUserService
 
     public async Task<UserDto> UpdateAsync(int id, UpdateUserRequest request, CancellationToken ct = default)
     {
-        var user = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == id, ct)
+        // El Rol hay que materializarlo: sin el Include, user.Rol queda a null y la comprobación
+        // del último administrador de más abajo petaría con NullReferenceException (500) en vez
+        // de devolver el mensaje de negocio (400). Es lo mismo que ya hace DeleteAsync.
+        var user = await _db.Usuarios.Include(u => u.Rol).FirstOrDefaultAsync(u => u.Id == id, ct)
             ?? throw new NotFoundException("Usuario no encontrado.");
 
         if (string.IsNullOrWhiteSpace(request.FullName))
